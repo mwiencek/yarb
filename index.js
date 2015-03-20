@@ -11,6 +11,16 @@ var minimatch = require('minimatch');
 var path = require('path');
 var Q = require('q');
 
+function promiseGlob(pattern) {
+    return Q.nfcall(glob, pattern);
+}
+
+function moduleHash(filename, source) {
+    var sha1 = crypto.createHash('sha1');
+    sha1.update(JSON.stringify([filename, source]));
+    return sha1.digest('hex').substring(0, 7);
+}
+
 function Bundle(options) {
     this._options = clone(options, true, 1);
     this._pack = null;
@@ -30,10 +40,6 @@ Bundle.prototype.write = function (filename) {
     this._begin();
     return this._pack;
 };
-
-function promiseGlob(pattern) {
-    return Q.nfcall(glob, pattern);
-}
 
 Bundle.prototype._getModulesForCachedFiles = function () {
     return Q.all(this._filenameCache.map(this._getModule, this));
@@ -193,12 +199,6 @@ Bundle.prototype._getExternalModule = function (filename) {
 
     return promise;
 };
-
-function moduleHash(filename, source) {
-    var sha1 = crypto.createHash('sha1');
-    sha1.update(JSON.stringify([filename, source]));
-    return sha1.digest('hex').substring(0, 7);
-}
 
 module.exports = function (options) {
     return new Bundle(options);
