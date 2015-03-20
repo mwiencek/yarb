@@ -8,6 +8,7 @@ var flatten = require('flatten');
 var fs = require('fs');
 var glob = require('glob');
 var minimatch = require('minimatch');
+var path = require('path');
 var Q = require('q');
 
 function Bundle(options) {
@@ -61,7 +62,11 @@ Bundle.prototype._begin = function () {
             return Q.all(flatten([options.entries || [], options.requires || []]).map(promiseGlob));
         }, onError)
         .then(function (globResults) {
-            self._filenameCache = arrayUniq(flatten(globResults));
+            var absPaths = flatten(globResults).map(function (p) {
+                return path.resolve(p);
+            });
+
+            self._filenameCache = arrayUniq(absPaths);
 
             return self._getModulesForCachedFiles();
         }, onError)
