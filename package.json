@@ -1,0 +1,21 @@
+{
+  "name": "yarb",
+  "version": "0.0.1",
+  "description": "Yet another require() bundler",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/mwiencek/yarb.git"
+  },
+  "license": "MIT",
+  "dependencies": {
+    "array-uniq": "^1.0.2",
+    "browser-pack": "^4.0.1",
+    "browser-resolve": "^1.8.1",
+    "clone": "^1.0.1",
+    "detective": "^4.0.0",
+    "flatten": "^0.0.1",
+    "glob": "^4.4.0",
+    "minimatch": "^2.0.4",
+    "q": "^1.1.2"
+  }
+}
