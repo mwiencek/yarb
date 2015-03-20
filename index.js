@@ -75,6 +75,7 @@ Bundle.prototype._begin = function () {
     this._pack = bpack({raw: true});
 
     function done() {
+        self._pack.end();
         self._pack = null;
     }
 
