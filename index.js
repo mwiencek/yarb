@@ -129,7 +129,7 @@ Bundle.prototype._getModule = function (filename) {
         }, onError)
         .then(function (source) {
             module.id = moduleHash(filename, source);
-            module.source = source;
+            module.source = source.toString();
 
             if (options.transforms) {
                 options.transforms.forEach(function (transform) {
