@@ -26,13 +26,8 @@ function Bundle(options) {
 }
 
 Bundle.prototype.write = function (filename) {
-    var ws = fs.createWriteStream(filename);
-    var promise = this._begin();
-
-    this._pack.pipe(ws);
-
-    promise.done(function () {ws.end()});
-    return promise;
+    this._begin();
+    return this._pack;
 };
 
 function promiseGlob(pattern) {
