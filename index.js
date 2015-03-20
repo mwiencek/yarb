@@ -150,7 +150,7 @@ Bundle.prototype._getModule = function (filename) {
                 bresolve(id, {filename: filename}, function (error, depFilename) {
                     if (error) {
                         mappingDeferred.reject();
-                        throw new Error('Error resolving module: ' + id);
+                        throw error;
                     }
 
                     // Check if the dependency exists in an external bundle
