@@ -92,7 +92,7 @@ Bundle.prototype._getModule = function (filename) {
         return externalPromise;
     }
 
-    // Inidicates when the module and all of its dependencies are processed
+    // Indicates when the module and all of its dependencies are processed
     var deferred = Q.defer();
     var self = this;
     var options = this._options;
