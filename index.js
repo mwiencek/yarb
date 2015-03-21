@@ -179,10 +179,16 @@ Bundle.prototype._add = function (filename) {
                 var module = self._findOrCreateModule(filename);
 
                 if (!cached || cached.mtime < stats.mtime) {
-                    SOURCE_CACHE.set(filename, {mtime: stats.mtime, source: Q.defer()});
+                    var deferredSource = Q.defer();
+
+                    SOURCE_CACHE.set(filename, {
+                        mtime: stats.mtime,
+                        source: deferredSource.promise
+                    });
 
                     self._loadModule(module).then(
                         function () {
+                            deferredSource.resolve(module.source);
                             deferred.resolve(module);
                             self._loadingFiles.delete(filename);
                         },
@@ -193,7 +199,7 @@ Bundle.prototype._add = function (filename) {
                     );
                 } else {
                     // mtime hasn't changed, return cached entry
-                    cached.source.promise.done(function (source) {
+                    cached.source.done(function (source) {
                         setSource(module, source);
                         deferred.resolve(module);
                     });
@@ -237,8 +243,6 @@ Bundle.prototype._loadModule = function (module) {
         .on('error', deferred.reject)
         .on('end', function () {
             setSource(module, source);
-
-            SOURCE_CACHE.get(module.sourceFile).source.resolve(source);
 
             self._resolveRequires(module).then(
                 function () {deferred.resolve(module)},
