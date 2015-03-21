@@ -12,7 +12,11 @@ var Q = require('q');
 var sliced = require('sliced');
 var through2 = require('through2');
 
+// property on module objects that stores deps in the current bundle only,
+// i.e. excluding external deps -- used when piping things to bpack
 var BUNDLED_DEPS = Symbol();
+
+// caches transformed module source code along with mtime
 var SOURCE_CACHE = new Map();
 
 function moduleHash(filename, source) {
@@ -41,8 +45,14 @@ function Bundle(files, options) {
         return glob.sync(pattern).map(function (p) {return path.resolve(p)});
     }));
 
-    // all files included in the bundle
+    // other exports included in the bundle
     this._requires = [];
+
+    // external bundles whose modules will be excluded from our own
+    this._externals = [];
+
+    // custom dependency names
+    this._exposed = new Map();
 
     // caches the filename -> module mapping
     this._bundledFileMapping = null;
@@ -52,14 +62,36 @@ function Bundle(files, options) {
 
     // caches pending module promises
     this._loadingFiles = new Map();
+
+    // controls whether bpack prelude includes require= prefix
+    this._hasExports = false;
 }
 
 Bundle.prototype.transform = function () {
     this._transforms.push(sliced(arguments));
+    return this;
+};
+
+Bundle.prototype.require = function (file, options) {
+    file = path.resolve(file);
+
+    this._requires.push(file);
+
+    if (options && options.expose) {
+        this._exposed.set(options.expose, file);
+    }
+
+    return this;
+};
+
+Bundle.prototype.external = function (bundle) {
+    this._externals.push(bundle);
+    bundle._hasExports = true;
+    return this;
 };
 
 Bundle.prototype.bundle = function () {
-    var pack = bpack({raw: true});
+    var pack = bpack({raw: true, hasExports: this._hasExports});
 
     // Source code may have changed
     this._bundledFileMapping = null;
@@ -229,44 +261,69 @@ Bundle.prototype._resolveRequire = function (module, id) {
         deferred.resolve();
     }
 
-    bresolve(id, {filename: module.sourceFile}, function (error, depFilename) {
-        if (error) {
-            deferred.reject(error);
-            return;
+    // check if the id is exposed by an external bundle
+    this._findExternal(function (b, mapping) {
+        var filename = b._exposed.get(id);
+        if (filename) {
+            return mapping.get(filename);
         }
+    }).then(
+        resolved,
+        function () {
+            bresolve(id, {filename: module.sourceFile}, function (error, depFilename) {
+                if (error) {
+                    deferred.reject(error);
+                    return;
+                }
 
-        var addToBundle = function () {
-            self._add(depFilename).done(function (dep) {
-                module[BUNDLED_DEPS].push(dep);
-                resolved(dep);
-            });
-        };
-
-        // Check if the dependency exists in an external bundle
-        var externals = self._options.externals;
-
-        if (externals && externals.length) {
-            Q.any(externals.map(function (b) {
-                var externalModule = Q.defer();
-
-                b._getBundledModules(
-                    function (mapping) {
-                        var external = mapping.get(depFilename);
-                        if (external) {
-                            externalModule.resolve(external);
-                        } else {
-                            externalModule.reject();
-                        }
-                    },
-                    deferred.reject
+                // check if the file exists in an external bundle
+                self._findExternal(function (b, mapping) {
+                    return mapping.get(depFilename);
+                }).then(
+                    resolved,
+                    function () {
+                        // wasn't found in any external bundle, add it to ours
+                        self._add(depFilename).done(function (dep) {
+                            module[BUNDLED_DEPS].push(dep);
+                            resolved(dep);
+                        });
+                    }
                 );
-
-                return externalModule.promise;
-            })).then(resolved, addToBundle);
-        } else {
-            addToBundle();
+            });
         }
-    });
+    );
+
+    return deferred.promise;
+};
+
+Bundle.prototype._findExternal = function (callback) {
+    var self = this;
+    var externals = this._externals;
+    var deferred = Q.defer();
+
+    if (externals && externals.length) {
+        Q.any(externals.map(function (b) {
+            var deferredMatch = Q.defer();
+
+            b._getBundledModules(
+                function (mapping) {
+                    var module = callback(b, mapping);
+                    if (module) {
+                        deferredMatch.resolve(module);
+                    } else {
+                        deferredMatch.reject();
+                    }
+                },
+                function (error) {
+                    throw error;
+                }
+            );
+
+            return deferredMatch.promise;
+        })).then(deferred.resolve, deferred.reject);
+    } else {
+        deferred.reject();
+    }
 
     return deferred.promise;
 };
