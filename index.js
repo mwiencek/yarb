@@ -15,10 +15,6 @@ var through2 = require('through2');
 var BUNDLED_DEPS = Symbol();
 var SOURCE_CACHE = new Map();
 
-function promiseGlob(pattern) {
-    return Q.nfcall(glob, pattern);
-}
-
 function moduleHash(filename, source) {
     var sha1 = crypto.createHash('sha1');
     sha1.update(JSON.stringify([filename, source]));
@@ -34,22 +30,27 @@ function strcmp(a, b) {
     return a.localeCompare(b);
 }
 
-function Bundle(options) {
-    this._options = clone(options, true, 1);
+function Bundle(files, options) {
+    this._options = clone(options || {}, true, 1);
 
-    // Browserify-compatible source transforms
+    // browserify-compatible source transforms
     this._transforms = [];
 
-    // Caches globbed filenames for entries/requires
-    this._globbedFiles = null;
+    // files the execute when the bundle is loaded
+    this._entries = flatten([].concat(files).map(function (pattern) {
+        return glob.sync(pattern).map(function (p) {return path.resolve(p)});
+    }));
 
-    // Caches the filename -> module mapping
+    // all files included in the bundle
+    this._requires = [];
+
+    // caches the filename -> module mapping
     this._bundledFileMapping = null;
 
-    // Holds a promise to _bundledFileMapping
+    // holds a promise to _bundledFileMapping
     this._deferredFileMapping = null;
 
-    // Caches pending module promises
+    // caches pending module promises
     this._loadingFiles = new Map();
 }
 
@@ -111,38 +112,17 @@ Bundle.prototype._getBundledModules = function (success, failure) {
         modules.forEach(addSelfAndDeps);
     };
 
-    var onError = function (error) {
-        failure(error);
-        deferred.reject(error);
-    };
-
-    var addFiles = function (filenames) {
-        Q.all(filenames.map(self._add, self)).then(
-            function (modules) {
-                addModules(modules);
-                self._bundledFileMapping = mapping;
-                success(mapping);
-                deferred.resolve(mapping);
-            },
-            onError
-        );
-    };
-
-    if (this._globbedFiles) {
-        addFiles(this._globbedFiles);
-        return;
-    }
-
-    Q.all(flatten([this._options.entries || [], this._options.requires || []]).map(promiseGlob))
-        .then(function (globResults) {
-            var filenames = flatten(globResults).map(function (p) {
-                return path.resolve(p);
-            });
-
-            self._globbedFiles = filenames;
-            addFiles(filenames);
+    Q.all(this._entries.concat(this._requires).map(this._add, this)).then(
+        function (modules) {
+            addModules(modules);
+            self._bundledFileMapping = mapping;
+            success(mapping);
+            deferred.resolve(mapping);
         },
-        onError
+        function (error) {
+            failure(error);
+            deferred.reject(error);
+        }
     );
 };
 
@@ -295,9 +275,7 @@ Bundle.prototype._createModule = function (filename) {
     var module = {
         deps: {},
         sourceFile: filename,
-        entry: (this._options.entries || []).some(function (e) {
-            return minimatch(filename, e);
-        })
+        entry: this._entries.some(function (e) {return minimatch(filename, e)})
     };
 
     Object.defineProperty(module, BUNDLED_DEPS, {
