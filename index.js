@@ -1,4 +1,3 @@
-var arrayUniq = require('array-uniq');
 var bpack = require('browser-pack');
 var bresolve = require('browser-resolve');
 var clone = require('clone');
@@ -11,6 +10,9 @@ var minimatch = require('minimatch');
 var path = require('path');
 var Q = require('q');
 
+var BUNDLED_DEPS = Symbol();
+var SOURCE_CACHE = new Map();
+
 function promiseGlob(pattern) {
     return Q.nfcall(glob, pattern);
 }
@@ -21,183 +23,272 @@ function moduleHash(filename, source) {
     return sha1.digest('hex').substring(0, 7);
 }
 
-function Bundle(options) {
-    this._options = clone(options, true, 1);
-    this._pack = null;
-    this._resolving = null;
-
-    // Caches globbed file names
-    this._filenameCache = [];
-
-    // Caches transformed modules
-    this._moduleCache = new Map();
-
-    // Maps absolute paths to promises that resolve to module objects
-    this._mapping = new Map();
+function setSource(module, source) {
+    module.source = source;
+    module.id = moduleHash(module.sourceFile, source);
 }
 
-Bundle.prototype.write = function (filename) {
-    this._begin();
-    return this._pack;
-};
+function strcmp(a, b) {
+    return a.localeCompare(b);
+}
 
-Bundle.prototype._getModulesForCachedFiles = function () {
-    return Q.all(this._filenameCache.map(this._getModule, this));
-};
+function Bundle(options) {
+    this._options = clone(options, true, 1);
 
-Bundle.prototype._begin = function () {
-    var self = this;
+    // Caches globbed filenames for entries/requires
+    this._globbedFiles = null;
 
-    if (this._resolving) {
-        if (this._resolving.isFulfilled()) {
-            return this_getModulesForCachedFiles();
+    // Caches the filename -> module mapping
+    this._bundledFileMapping = null;
+
+    // Holds a promise to _bundledFileMapping
+    this._deferredFileMapping = null;
+
+    // Caches pending module promises
+    this._loadingFiles = new Map();
+}
+
+Bundle.prototype.bundle = function () {
+    var pack = bpack({raw: true});
+
+    // Source code may have changed
+    this._bundledFileMapping = null;
+    this._deferredFileMapping = null;
+
+    this._getBundledModules(
+        function (mapping) {
+            var sorted = [];
+
+            for (var filename of mapping.keys()) {
+                sorted.push(filename);
+            }
+
+            sorted.sort().forEach(function (filename) {
+                pack.write(mapping.get(filename));
+            });
+
+            pack.end();
+        },
+        function (error) {
+            throw error;
         }
-        return this._resolving;
+    );
+
+    return pack;
+};
+
+Bundle.prototype._getBundledModules = function (success, failure) {
+    if (this._bundledFileMapping) {
+        success(this._bundledFileMapping);
+        return;
     }
 
-    var options = this._options;
+    if (this._deferredFileMapping) {
+        this._deferredFileMapping.then(success, failure);
+        return;
+    }
+
+    var self = this;
+    var mapping = new Map();
     var deferred = Q.defer();
+    this._deferredFileMapping = deferred.promise;
 
-    function onError(error) {
+    var addSelfAndDeps = function (m) {
+        mapping.set(m.sourceFile, m);
+        addModules(m[BUNDLED_DEPS]);
+    };
+
+    var addModules = function (modules) {
+        modules.forEach(addSelfAndDeps);
+    };
+
+    var onError = function (error) {
+        failure(error);
         deferred.reject(error);
+    };
+
+    var addFiles = function (filenames) {
+        Q.all(filenames.map(self._add, self)).then(
+            function (modules) {
+                addModules(modules);
+                self._bundledFileMapping = mapping;
+                success(mapping);
+                deferred.resolve(mapping);
+            },
+            onError
+        );
+    };
+
+    if (this._globbedFiles) {
+        addFiles(this._globbedFiles);
+        return;
     }
 
-    // Resolve globs to an aggregated list of all absolute paths to be included in the bundle.
-    Q.all((options.externals || []).map(function (b) {return b._begin()}))
-        .then(function () {
-            return Q.all(flatten([options.entries || [], options.requires || []]).map(promiseGlob));
-        }, onError)
+    // Resolve globs to an aggregated list of all absolute paths to be included in the bundle
+    Q.all(flatten([this._options.entries || [], this._options.requires || []]).map(promiseGlob))
         .then(function (globResults) {
-            var absPaths = flatten(globResults).map(function (p) {
+            var filenames = flatten(globResults).map(function (p) {
                 return path.resolve(p);
             });
 
-            self._filenameCache = arrayUniq(absPaths);
-
-            return self._getModulesForCachedFiles();
-        }, onError)
-        .then(function () {deferred.resolve()}, onError);
-
-    this._pack = bpack({raw: true});
-
-    function done() {
-        self._pack.end();
-        self._pack = null;
-    }
-
-    this._resolving = deferred.promise;
-    this._resolving.then(done, done);
-    return this._resolving;
+            self._globbedFiles = filenames;
+            addFiles(filenames);
+        },
+        onError
+    );
 };
 
-Bundle.prototype._getModule = function (filename) {
-    // Check if we're already processing this module
-    if (this._mapping.has(filename)) {
-        return this._mapping.get(filename);
+Bundle.prototype._add = function (filename) {
+    if (this._loadingFiles.has(filename)) {
+        return this._loadingFiles.get(filename);
     }
 
-    // Check if the module exists in an external bundle
-    var externalPromise = this._getExternalModule(filename);
-    if (externalPromise) {
-        return externalPromise;
-    }
-
-    // Indicates when the module and all of its dependencies are processed
-    var deferred = Q.defer();
     var self = this;
-    var options = this._options;
-    var module;
+    var deferred = Q.defer();
 
-    function onError(error) {
-        deferred.reject(error);
-    }
-
-    function finish() {
-        self._pack.write(module);
-        deferred.resolve(module);
-    }
-
-    if (this._moduleCache.has(filename)) {
-        module = this._moduleCache.get(filename);
-    } else {
-        module = {
-            deps: {},
-            sourceFile: filename,
-            entry: (options.entries || []).some(function (e) {return minimatch(filename, e)})
-        };
-        this._moduleCache.set(filename, module);
-    }
-
-    Q.nfcall(fs.stat, filename)
-        .then(function (stats) {
+    Q.nfcall(fs.stat, filename).then(
+        function (stats) {
             if (stats.isFile()) {
-                if (!module.mtime || module.mtime < stats.mtime) {
-                    module.mtime = stats.mtime;
-                    return Q.nfcall(fs.readFile, filename);
+                var cached = SOURCE_CACHE.get(filename);
+                var module = self._createModule(filename);
+
+                if (!cached || cached.mtime < stats.mtime) {
+                    SOURCE_CACHE.set(filename, {mtime: stats.mtime, source: Q.defer()});
+
+                    self._loadModule(module).then(
+                        function () {
+                            deferred.resolve(module);
+                            self._loadingFiles.delete(filename);
+                        },
+                        function (error) {
+                            deferred.reject(error);
+                            self._loadingFiles.delete(filename);
+                        }
+                    );
                 } else {
-                    finish();
+                    // mtime hasn't changed, return cached entry
+                    cached.source.promise.done(function (source) {
+                        setSource(module, source);
+                        deferred.resolve(module);
+                    });
                 }
+            } else {
+                deferred.reject();
             }
-        }, onError)
-        .then(function (source) {
-            module.id = moduleHash(filename, source);
-            module.source = source.toString();
+        },
+        deferred.reject
+    );
 
-            if (options.transforms) {
-                options.transforms.forEach(function (transform) {
-                    module.source = transform(filename, module.source);
-                });
-            }
-
-            var requires = detective(source);
-
-            var allResolved = Q.all(requires.map(function (id) {
-                var mappingDeferred = Q.defer();
-
-                function depResolved(dep) {
-                    module.deps[id] = dep.id;
-                    mappingDeferred.resolve();
-                }
-
-                bresolve(id, {filename: filename}, function (error, depFilename) {
-                    if (error) {
-                        mappingDeferred.reject();
-                        throw error;
-                    }
-
-                    // Check if the dependency exists in an external bundle
-                    var externalPromise = self._getExternalModule(depFilename);
-                    if (externalPromise) {
-                        externalPromise.done(depResolved);
-                    } else {
-                        self._getModule(depFilename).done(depResolved);
-                    }
-                });
-
-                return mappingDeferred.promise;
-            }));
-
-            allResolved.done(finish);
-        }, onError);
-
-    this._mapping.set(filename, deferred.promise);
+    this._loadingFiles.set(filename, deferred.promise);
     return deferred.promise;
 };
 
-Bundle.prototype._getExternalModule = function (filename) {
-    var promise;
+Bundle.prototype._loadModule = function (module) {
+    var self = this;
+    var deferred = Q.defer();
+    var filename = module.sourceFile;
 
-    if (this._options.externals) {
-        this._options.externals.every(function (b) {
-            if (b._mapping.has(filename)) {
-                promise = b._mapping.get(filename);
-                return false; // break
+    Q.nfcall(fs.readFile, filename).then(
+        function (source) {
+            source = source.toString();
+
+            if (self._options.transforms) {
+                self._options.transforms.forEach(function (transform) {
+                    source = transform(filename, source);
+                });
             }
-            return true; // continue
-        });
+
+            setSource(module, source);
+            SOURCE_CACHE.get(filename).source.resolve(source);
+
+            self._resolveRequires(module).then(
+                function () {deferred.resolve(module)},
+                deferred.reject
+            );
+        },
+        deferred.reject
+    );
+
+    return deferred.promise;
+};
+
+Bundle.prototype._resolveRequires = function (module) {
+    // Recursively resolve all require()'d modules in the source
+    var self = this;
+
+    return Q.all(detective(module.source).map(function (id) {
+        return self._resolveRequire(module, id);
+    }));
+};
+
+Bundle.prototype._resolveRequire = function (module, id) {
+    var self = this;
+    var deferred = Q.defer();
+
+    function resolved(dep) {
+        module.deps[id] = dep.id;
+        deferred.resolve();
     }
 
-    return promise;
+    bresolve(id, {filename: module.sourceFile}, function (error, depFilename) {
+        if (error) {
+            deferred.reject(error);
+            return;
+        }
+
+        var addToBundle = function () {
+            self._add(depFilename).done(function (dep) {
+                module[BUNDLED_DEPS].push(dep);
+                resolved(dep);
+            });
+        };
+
+        // Check if the dependency exists in an external bundle
+        var externals = self._options.externals;
+
+        if (externals && externals.length) {
+            Q.any(externals.map(function (b) {
+                var externalModule = Q.defer();
+
+                b._getBundledModules(
+                    function (mapping) {
+                        var external = mapping.get(depFilename);
+                        if (external) {
+                            externalModule.resolve(external);
+                        } else {
+                            externalModule.reject();
+                        }
+                    },
+                    deferred.reject
+                );
+
+                return externalModule.promise;
+            })).then(resolved, addToBundle);
+        } else {
+            addToBundle();
+        }
+    });
+
+    return deferred.promise;
+};
+
+Bundle.prototype._createModule = function (filename) {
+    var module = {
+        deps: {},
+        sourceFile: filename,
+        entry: (this._options.entries || []).some(function (e) {
+            return minimatch(filename, e);
+        })
+    };
+
+    Object.defineProperty(module, BUNDLED_DEPS, {
+        value: [],
+        configurable: false,
+        enumerable: false,
+        writable: true
+    });
+
+    return module;
 };
 
 module.exports = function (options) {
