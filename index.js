@@ -3,7 +3,6 @@
 var bpack = require('browser-pack');
 var bresolve = require('browser-resolve');
 var clone = require('clone');
-var crypto = require('crypto');
 var detective = require('detective');
 var flatten = require('flatten');
 var fs = require('fs');
@@ -23,17 +22,6 @@ var RESOLVING_REQUIRES = Symbol();
 
 // caches transformed module source code along with mtime
 var SOURCE_CACHE = new Map();
-
-function moduleHash(filename, source) {
-    var sha1 = crypto.createHash('sha1');
-    sha1.update(JSON.stringify([filename, source]));
-    return sha1.digest('hex').substring(0, 7);
-}
-
-function setSource(module, source) {
-    module.source = source;
-    module.id = moduleHash(module.sourceFile, source);
-}
 
 function strcmp(a, b) {
     return a.localeCompare(b);
@@ -206,7 +194,7 @@ Bundle.prototype._add = function (filename) {
                 } else {
                     // mtime hasn't changed, return cached entry
                     cached.source.done(function (source) {
-                        setSource(module, source);
+                        module.source = source;
                         deferred.resolve(module);
                     });
                 }
@@ -223,11 +211,11 @@ Bundle.prototype._add = function (filename) {
 
 Bundle.prototype._loadModule = function (module) {
     var self = this;
-    var source = '';
     var deferred = Q.defer();
     var stream = fs.createReadStream(module.sourceFile);
 
     // clear previous load results
+    module.source = '';
     module.deps = {};
     module[BUNDLED_DEPS] = [];
 
@@ -248,15 +236,13 @@ Bundle.prototype._loadModule = function (module) {
     stream
         .on('error', deferred.reject)
         .on('end', function () {
-            setSource(module, source);
-
             self._resolveRequires(module).then(
                 function () {deferred.resolve(module)},
                 deferred.reject
             );
         })
         .pipe(through2(function (chunk, enc, cb) {
-            source += chunk.toString();
+            module.source += chunk.toString();
             cb();
         }));
 
@@ -365,6 +351,8 @@ Bundle.prototype._findExternal = function (callback) {
     return deferred.promise;
 };
 
+var NEXT_MODULE_ID = 1;
+
 Bundle.prototype._findOrCreateModule = function (filename) {
     var module = this._moduleCache.get(filename);
 
@@ -373,6 +361,7 @@ Bundle.prototype._findOrCreateModule = function (filename) {
     }
 
     module = {
+        id: NEXT_MODULE_ID++,
         deps: {},
         sourceFile: filename,
         entry: this._entries.some(function (e) {return minimatch(filename, e)}),
