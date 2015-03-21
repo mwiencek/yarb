@@ -186,17 +186,21 @@ Bundle.prototype._add = function (filename) {
                         source: deferredSource.promise
                     });
 
-                    self._loadModule(module).then(
+                    var loading = self._loadModule(module);
+
+                    loading.then(
                         function () {
                             deferredSource.resolve(module.source);
                             deferred.resolve(module);
-                            self._loadingFiles.delete(filename);
                         },
                         function (error) {
                             deferred.reject(error);
-                            self._loadingFiles.delete(filename);
                         }
                     );
+
+                    loading.finally(function () {
+                        self._loadingFiles.delete(filename);
+                    });
                 } else {
                     // mtime hasn't changed, return cached entry
                     cached.source.done(function (source) {
@@ -280,8 +284,11 @@ Bundle.prototype._resolveRequire = function (module, id) {
     var resolved = function (dep) {
         module.deps[id] = dep.id;
         deferred.resolve();
-        resolving.delete(id);
     };
+
+    deferred.promise.finally(function () {
+        resolving.delete(id);
+    });
 
     // check if the id is exposed by an external bundle
     this._findExternal(function (b, mapping) {
