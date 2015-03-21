@@ -269,11 +269,9 @@ Bundle.prototype._resolveRequire = function (module, id) {
         return resolving.get(id);
     }
 
+    var self = this;
     var deferred = Q.defer();
     resolving.set(id, deferred.promise);
-
-    // check if the id is exposed by an external bundle
-    var self = this;
 
     var resolved = function (dep) {
         module.deps[id] = dep.id;
@@ -281,6 +279,7 @@ Bundle.prototype._resolveRequire = function (module, id) {
         resolving.delete(id);
     };
 
+    // check if the id is exposed by an external bundle
     this._findExternal(function (b, mapping) {
         var filename = b._exposed.get(id);
         if (filename) {
