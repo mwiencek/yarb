@@ -300,6 +300,12 @@ Bundle.prototype._resolveRequire = function (module, id) {
                 }).then(
                     resolved,
                     function () {
+                        // id is not a path; make sure we expose the actual resolved path,
+                        // so dependent bundles can require the same identifer from us.
+                        if (!/^(\.\/|\/|\.\.\/)/.test(id) && !self._exposed.has(id)) {
+                            self._exposed.set(id, depFilename);
+                        }
+
                         // wasn't found in any external bundle, add it to ours
                         self._add(depFilename).done(function (dep) {
                             module[BUNDLED_DEPS].push(dep);
