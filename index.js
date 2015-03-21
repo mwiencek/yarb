@@ -362,7 +362,8 @@ Bundle.prototype._findOrCreateModule = function (filename) {
     module = {
         deps: {},
         sourceFile: filename,
-        entry: this._entries.some(function (e) {return minimatch(filename, e)})
+        entry: this._entries.some(function (e) {return minimatch(filename, e)}),
+        nomap: !this._options.debug
     };
 
     Object.defineProperty(module, BUNDLED_DEPS, {
