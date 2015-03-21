@@ -9,6 +9,8 @@ var glob = require('glob');
 var minimatch = require('minimatch');
 var path = require('path');
 var Q = require('q');
+var sliced = require('sliced');
+var through2 = require('through2');
 
 var BUNDLED_DEPS = Symbol();
 var SOURCE_CACHE = new Map();
@@ -35,6 +37,9 @@ function strcmp(a, b) {
 function Bundle(options) {
     this._options = clone(options, true, 1);
 
+    // Browserify-compatible source transforms
+    this._transforms = [];
+
     // Caches globbed filenames for entries/requires
     this._globbedFiles = null;
 
@@ -47,6 +52,10 @@ function Bundle(options) {
     // Caches pending module promises
     this._loadingFiles = new Map();
 }
+
+Bundle.prototype.transform = function () {
+    this._transforms.push(sliced(arguments));
+};
 
 Bundle.prototype.bundle = function () {
     var pack = bpack({raw: true});
@@ -184,29 +193,40 @@ Bundle.prototype._add = function (filename) {
 
 Bundle.prototype._loadModule = function (module) {
     var self = this;
+    var source = '';
     var deferred = Q.defer();
-    var filename = module.sourceFile;
+    var stream = fs.createReadStream(module.sourceFile);
 
-    Q.nfcall(fs.readFile, filename).then(
-        function (source) {
-            source = source.toString();
+    if (self._transforms) {
+        self._transforms.forEach(function (args) {
+            var transform = args[0];
 
-            if (self._options.transforms) {
-                self._options.transforms.forEach(function (transform) {
-                    source = transform(filename, source);
-                });
+            if (typeof transform === 'string') {
+                transform = require(transform);
             }
 
+            stream = stream.pipe(
+                transform.apply(null, [module.sourceFile].concat(args.slice(1)))
+            );
+        });
+    }
+
+    stream
+        .on('error', deferred.reject)
+        .on('end', function () {
             setSource(module, source);
-            SOURCE_CACHE.get(filename).source.resolve(source);
+
+            SOURCE_CACHE.get(module.sourceFile).source.resolve(source);
 
             self._resolveRequires(module).then(
                 function () {deferred.resolve(module)},
                 deferred.reject
             );
-        },
-        deferred.reject
-    );
+        })
+        .pipe(through2(function (chunk, enc, cb) {
+            source += chunk.toString();
+            cb();
+        }));
 
     return deferred.promise;
 };
