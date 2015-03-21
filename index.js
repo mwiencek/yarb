@@ -1,3 +1,5 @@
+'use strict';
+
 var bpack = require('browser-pack');
 var bresolve = require('browser-resolve');
 var clone = require('clone');
