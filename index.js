@@ -16,6 +16,9 @@ var through2 = require('through2');
 // i.e. excluding external deps -- used when piping things to bpack
 var BUNDLED_DEPS = Symbol();
 
+// property on module objects linking to promises for resolving dep ids
+var RESOLVING_REQUIRES = Symbol();
+
 // caches transformed module source code along with mtime
 var SOURCE_CACHE = new Map();
 
@@ -65,6 +68,9 @@ function Bundle(files, options) {
 
     // controls whether bpack prelude includes require= prefix
     this._hasExports = false;
+
+    // filename -> module cache
+    this._moduleCache = new Map();
 }
 
 Bundle.prototype.transform = function () {
@@ -170,7 +176,7 @@ Bundle.prototype._add = function (filename) {
         function (stats) {
             if (stats.isFile()) {
                 var cached = SOURCE_CACHE.get(filename);
-                var module = self._createModule(filename);
+                var module = self._findOrCreateModule(filename);
 
                 if (!cached || cached.mtime < stats.mtime) {
                     SOURCE_CACHE.set(filename, {mtime: stats.mtime, source: Q.defer()});
@@ -208,6 +214,10 @@ Bundle.prototype._loadModule = function (module) {
     var source = '';
     var deferred = Q.defer();
     var stream = fs.createReadStream(module.sourceFile);
+
+    // clear previous load results
+    module.deps = {};
+    module[BUNDLED_DEPS] = [];
 
     if (self._transforms) {
         self._transforms.forEach(function (args) {
@@ -253,15 +263,24 @@ Bundle.prototype._resolveRequires = function (module) {
 };
 
 Bundle.prototype._resolveRequire = function (module, id) {
-    var self = this;
-    var deferred = Q.defer();
+    var resolving = module[RESOLVING_REQUIRES];
 
-    function resolved(dep) {
-        module.deps[id] = dep.id;
-        deferred.resolve();
+    if (resolving.has(id)) {
+        return resolving.get(id);
     }
 
+    var deferred = Q.defer();
+    resolving.set(id, deferred.promise);
+
     // check if the id is exposed by an external bundle
+    var self = this;
+
+    var resolved = function (dep) {
+        module.deps[id] = dep.id;
+        deferred.resolve();
+        resolving.delete(id);
+    };
+
     this._findExternal(function (b, mapping) {
         var filename = b._exposed.get(id);
         if (filename) {
@@ -328,8 +347,14 @@ Bundle.prototype._findExternal = function (callback) {
     return deferred.promise;
 };
 
-Bundle.prototype._createModule = function (filename) {
-    var module = {
+Bundle.prototype._findOrCreateModule = function (filename) {
+    var module = this._moduleCache.get(filename);
+
+    if (module) {
+        return module;
+    }
+
+    module = {
         deps: {},
         sourceFile: filename,
         entry: this._entries.some(function (e) {return minimatch(filename, e)})
@@ -342,6 +367,14 @@ Bundle.prototype._createModule = function (filename) {
         writable: true
     });
 
+    Object.defineProperty(module, RESOLVING_REQUIRES, {
+        value: new Map(),
+        configurable: false,
+        enumerable: false,
+        writable: false
+    });
+
+    this._moduleCache.set(filename, module);
     return module;
 };
 
