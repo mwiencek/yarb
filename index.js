@@ -124,7 +124,6 @@ Bundle.prototype._getBundledModules = function (success, failure) {
         return;
     }
 
-    // Resolve globs to an aggregated list of all absolute paths to be included in the bundle
     Q.all(flatten([this._options.entries || [], this._options.requires || []]).map(promiseGlob))
         .then(function (globResults) {
             var filenames = flatten(globResults).map(function (p) {
