@@ -1,4 +1,7 @@
+// lib_plugin provides lib, so the bundle should provide both
+require('lib_plugin');
+
+// browser-field name
 require('shim');
-require('node_dep');
 
 module.exports = 'bundle1';
