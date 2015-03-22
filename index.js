@@ -21,8 +21,11 @@ var BUNDLED_DEPS = Symbol();
 // property on module objects linking to promises for resolving dep ids
 var RESOLVING_REQUIRES = Symbol();
 
-// caches transformed module source code along with mtime
-var SOURCE_CACHE = new Map();
+// mtime prop for module source
+var LAST_MODIFIED = Symbol();
+
+// global module cache, minus bundle-specific props (entry, nomap)
+var MODULE_CACHE = new Map();
 
 function moduleHash(filename, source) {
     var sha1 = crypto.createHash('sha1');
@@ -37,6 +40,15 @@ function setSource(module, source) {
 
 function strcmp(a, b) {
     return a.localeCompare(b);
+}
+
+function definedHiddenProp(object, key, value) {
+    Object.defineProperty(object, key, {
+        value: value,
+        configurable: false,
+        enumerable: false,
+        writable: true
+    });
 }
 
 function Bundle(files, options) {
@@ -70,9 +82,6 @@ function Bundle(files, options) {
 
     // controls whether bpack prelude includes require= prefix
     this._hasExports = false;
-
-    // filename -> module cache
-    this._moduleCache = new Map();
 }
 
 Bundle.prototype.transform = function () {
@@ -114,7 +123,12 @@ Bundle.prototype.bundle = function () {
             }
 
             sorted.sort().forEach(function (filename) {
-                pack.write(mapping.get(filename));
+                pack.write(
+                    Object.create(mapping.get(filename), {
+                        entry: self._entries.some(function (e) {return minimatch(filename, e)}),
+                        nomap: !self._options.debug
+                    })
+                );
             });
 
             pack.end();
@@ -177,27 +191,16 @@ Bundle.prototype._add = function (filename) {
     Q.nfcall(fs.stat, filename).then(
         function (stats) {
             if (stats.isFile()) {
-                var cached = SOURCE_CACHE.get(filename);
                 var module = self._findOrCreateModule(filename);
 
-                if (!cached || cached.mtime < stats.mtime) {
-                    var deferredSource = Q.defer();
-
-                    SOURCE_CACHE.set(filename, {
-                        mtime: stats.mtime,
-                        source: deferredSource.promise
-                    });
+                if (!module[LAST_MODIFIED] || module[LAST_MODIFIED] < stats.mtime) {
+                    module[LAST_MODIFIED] = stats.mtime;
 
                     var loading = self._loadModule(module);
 
                     loading.then(
-                        function () {
-                            deferredSource.resolve(module.source);
-                            deferred.resolve(module);
-                        },
-                        function (error) {
-                            deferred.reject(error);
-                        }
+                        function () {deferred.resolve(module)},
+                        deferred.reject
                     );
 
                     loading.finally(function () {
@@ -205,10 +208,7 @@ Bundle.prototype._add = function (filename) {
                     });
                 } else {
                     // mtime hasn't changed, return cached entry
-                    cached.source.done(function (source) {
-                        setSource(module, source);
-                        deferred.resolve(module);
-                    });
+                    deferred.resolve(module);
                 }
             } else {
                 deferred.reject();
@@ -366,34 +366,17 @@ Bundle.prototype._findExternal = function (callback) {
 };
 
 Bundle.prototype._findOrCreateModule = function (filename) {
-    var module = this._moduleCache.get(filename);
-
+    var module = MODULE_CACHE.get(filename);
     if (module) {
         return module;
     }
 
-    module = {
-        deps: {},
-        sourceFile: filename,
-        entry: this._entries.some(function (e) {return minimatch(filename, e)}),
-        nomap: !this._options.debug
-    };
+    module = {deps: {}, sourceFile: filename};
+    definedHiddenProp(module, BUNDLED_DEPS, []);
+    definedHiddenProp(module, RESOLVING_REQUIRES, new Map());
+    definedHiddenProp(module, LAST_MODIFIED, undefined);
 
-    Object.defineProperty(module, BUNDLED_DEPS, {
-        value: [],
-        configurable: false,
-        enumerable: false,
-        writable: true
-    });
-
-    Object.defineProperty(module, RESOLVING_REQUIRES, {
-        value: new Map(),
-        configurable: false,
-        enumerable: false,
-        writable: false
-    });
-
-    this._moduleCache.set(filename, module);
+    MODULE_CACHE.set(filename, module);
     return module;
 };
 
