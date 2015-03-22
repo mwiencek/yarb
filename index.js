@@ -3,6 +3,7 @@
 var bpack = require('browser-pack');
 var bresolve = require('browser-resolve');
 var clone = require('clone');
+var concat = require('concat-stream');
 var crypto = require('crypto');
 var detective = require('detective');
 var flatten = require('flatten');
@@ -107,7 +108,7 @@ Bundle.prototype.external = function (bundle) {
     return this;
 };
 
-Bundle.prototype.bundle = function () {
+Bundle.prototype.bundle = function (callback) {
     var pack = bpack({raw: true, hasExports: this._hasExports});
 
     // Source code may have changed
@@ -134,9 +135,17 @@ Bundle.prototype.bundle = function () {
             pack.end();
         },
         function (error) {
-            throw error;
+            pack.emit('error', error);
+
+            if (callback) {
+                callback(error, null);
+            }
         }
     );
+
+    if (callback) {
+        return pack.pipe(concat(function (buf) {callback(null, buf)}));
+    }
 
     return pack;
 };

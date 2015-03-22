@@ -11,6 +11,7 @@
     "browser-pack": "^4.0.1",
     "browser-resolve": "^1.8.1",
     "clone": "^1.0.1",
+    "concat-stream": "^1.4.7",
     "detective": "^4.0.0",
     "flatten": "^0.0.1",
     "glob": "^4.4.0",
