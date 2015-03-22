@@ -19,5 +19,8 @@
     "q": "^1.1.2",
     "sliced": "^0.0.5",
     "through2": "^0.6.3"
+  },
+  "devDependencies": {
+    "tape": "^3.5.0"
   }
 }
