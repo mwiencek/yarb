@@ -8,7 +8,6 @@ var crypto = require('crypto');
 var detective = require('detective');
 var flatten = require('flatten');
 var fs = require('fs');
-var glob = require('glob');
 var minimatch = require('minimatch');
 var path = require('path');
 var Q = require('q');
@@ -70,9 +69,7 @@ function Bundle(files, options) {
     this._transforms = [];
 
     // files the execute when the bundle is loaded
-    this._entries = flatten([].concat(files).map(function (pattern) {
-        return glob.sync(pattern).map(function (p) {return path.resolve(p)});
-    }));
+    this._entries = [].concat(files).map(function (f) {return path.resolve(f)});
 
     // other exports included in the bundle
     this._requires = [];

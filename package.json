@@ -14,7 +14,6 @@
     "concat-stream": "^1.4.7",
     "detective": "^4.0.0",
     "flatten": "^0.0.1",
-    "glob": "^4.4.0",
     "minimatch": "^2.0.4",
     "q": "^1.1.2",
     "sliced": "^0.0.5",
