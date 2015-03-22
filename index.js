@@ -28,6 +28,21 @@ var LAST_MODIFIED = Symbol();
 // global module cache, minus bundle-specific props (entry, nomap)
 var MODULE_CACHE = new Map();
 
+function findOrCreateModule(filename) {
+    var module = MODULE_CACHE.get(filename);
+    if (module) {
+        return module;
+    }
+
+    module = {deps: {}, sourceFile: filename};
+    definedHiddenProp(module, BUNDLED_DEPS, []);
+    definedHiddenProp(module, RESOLVING_REQUIRES, new Map());
+    definedHiddenProp(module, LAST_MODIFIED, undefined);
+
+    MODULE_CACHE.set(filename, module);
+    return module;
+}
+
 function moduleHash(filename, source) {
     var sha1 = crypto.createHash('sha1');
     sha1.update(JSON.stringify([filename, source]));
@@ -200,7 +215,7 @@ Bundle.prototype._add = function (filename) {
     Q.nfcall(fs.stat, filename).then(
         function (stats) {
             if (stats.isFile()) {
-                var module = self._findOrCreateModule(filename);
+                var module = findOrCreateModule(filename);
 
                 if (!module[LAST_MODIFIED] || module[LAST_MODIFIED] < stats.mtime) {
                     module[LAST_MODIFIED] = stats.mtime;
@@ -372,21 +387,6 @@ Bundle.prototype._findExternal = function (callback) {
     }
 
     return deferred.promise;
-};
-
-Bundle.prototype._findOrCreateModule = function (filename) {
-    var module = MODULE_CACHE.get(filename);
-    if (module) {
-        return module;
-    }
-
-    module = {deps: {}, sourceFile: filename};
-    definedHiddenProp(module, BUNDLED_DEPS, []);
-    definedHiddenProp(module, RESOLVING_REQUIRES, new Map());
-    definedHiddenProp(module, LAST_MODIFIED, undefined);
-
-    MODULE_CACHE.set(filename, module);
-    return module;
 };
 
 module.exports = function (options) {
