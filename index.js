@@ -124,6 +124,7 @@ Bundle.prototype.external = function (bundle) {
 };
 
 Bundle.prototype.bundle = function (callback) {
+    var self = this;
     var pack = bpack({raw: true, hasExports: this._hasExports});
 
     // Source code may have changed
@@ -139,12 +140,12 @@ Bundle.prototype.bundle = function (callback) {
             }
 
             sorted.sort().forEach(function (filename) {
-                pack.write(
-                    Object.create(mapping.get(filename), {
-                        entry: self._entries.some(function (e) {return minimatch(filename, e)}),
-                        nomap: !self._options.debug
-                    })
-                );
+                var module = clone(mapping.get(filename), true, 2);
+
+                module.entry = self._entries.some(function (e) {return minimatch(filename, e)});
+                module.nomap = !self._options.debug;
+
+                pack.write(module);
             });
 
             pack.end();
