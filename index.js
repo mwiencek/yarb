@@ -54,10 +54,6 @@ function setSource(module, source) {
     module.id = moduleHash(module.sourceFile, source);
 }
 
-function strcmp(a, b) {
-    return a.localeCompare(b);
-}
-
 function definedHiddenProp(object, key, value) {
     Object.defineProperty(object, key, {
         value: value,
