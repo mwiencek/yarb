@@ -1,16 +1,14 @@
 'use strict';
 
 var bpack = require('browser-pack');
-var bresolve = require('browser-resolve');
 var clone = require('clone');
 var concat = require('concat-stream');
-var detective = require('detective');
 var fs = require('fs');
 var path = require('path');
 var Q = require('q');
 var sliced = require('sliced');
-var stream = require('stream');
 var File = require('./src/file.js');
+var resolveRequires = require('./src/resolve-requires.js');
 
 function getVinyls(files) {
     return [].concat(files).map(getVinyl);
@@ -150,7 +148,7 @@ Bundle.prototype._readFile = function (file) {
     var bufferThenResolve = function () {
         file._buffer(self._transforms).then(
             function () {
-                self._resolveRequires(file).then(readFinished, deferred.reject);
+                resolveRequires(self, file).then(readFinished, deferred.reject);
             },
             deferred.reject
         );
@@ -191,96 +189,6 @@ Bundle.prototype._readFile = function (file) {
     );
 
     this._buffering.set(file.path, deferred.promise);
-    return deferred.promise;
-};
-
-Bundle.prototype._resolveRequires = function (file) {
-    file._deps = {};
-
-    var promises = [];
-    for (var id of (new Set(detective(file.contents)))) {
-        promises.push(this._resolveRequire(file, id));
-    }
-
-    return Q.all(promises);
-};
-
-Bundle.prototype._resolveRequire = function (file, id) {
-    var self = this;
-    var deferred = Q.defer();
-
-    function resolved(depFile) {
-        file._deps[id] = depFile._hash;
-        deferred.resolve();
-    }
-
-    // check if the id is exposed by an external bundle
-    this._findExternal(function (b) {
-        var filename = b._exposed.get(id);
-        if (filename) {
-            return b._files.get(filename);
-        }
-    }).then(
-        resolved,
-        function () {
-            bresolve(id, {filename: file.path}, function (error, depFilename) {
-                if (error) {
-                    deferred.reject(error);
-                    return;
-                }
-
-                // check if the file exists in an external bundle
-                self._findExternal(function (b) {
-                    return b._files.get(depFilename);
-                }).then(
-                    resolved,
-                    function () {
-                        // id is not a path; make sure we expose the actual resolved path,
-                        // so dependent bundles can require the same identifer from us.
-                        if (!/^(\.\/|\/|\.\.\/)/.test(id) && !self._exposed.has(id)) {
-                            self._exposed.set(id, depFilename);
-                        }
-
-                        // wasn't found in any external bundle, add it to ours
-                        self.require(depFilename);
-                        self._readFile(self._files.get(depFilename)).then(resolved, deferred.reject);
-                    }
-                );
-            });
-        }
-    );
-
-    return deferred.promise;
-};
-
-Bundle.prototype._findExternal = function (callback) {
-    var externals = this._externals;
-    var deferred = Q.defer();
-
-    if (externals && externals.length) {
-        Q.any(externals.map(function (b) {
-            var deferredMatch = Q.defer();
-
-            b._readFiles().then(
-                function () {
-                    var file = callback(b);
-                    if (file) {
-                        deferredMatch.resolve(file);
-                    } else {
-                        deferredMatch.reject();
-                    }
-                },
-                function (error) {
-                    throw error;
-                }
-            );
-
-            return deferredMatch.promise;
-        })).then(deferred.resolve, deferred.reject);
-    } else {
-        deferred.reject();
-    }
-
     return deferred.promise;
 };
 
