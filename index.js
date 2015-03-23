@@ -13,7 +13,7 @@ var sliced = require('sliced');
 var stream = require('stream');
 var through2 = require('through2');
 var VinylFile = require('vinyl');
-var bufferStream = require('./buffer-stream.js');
+var bufferStream = require('./src/buffer-stream.js');
 
 function File() {
     VinylFile.apply(this, arguments);
