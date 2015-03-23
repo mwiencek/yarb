@@ -5,7 +5,7 @@ var yarb = require('../');
 test('expose', function (t) {
     t.plan(2);
 
-    var b1 = yarb('expose/bundle1.js').require('expose/shim.js', {expose: 'shim'});
+    var b1 = yarb('expose/bundle1.js').expose('expose/shim.js', 'shim');
     var b2 = yarb('expose/bundle2.js').external(b1);
 
     b1.bundle(function (err, buf) {

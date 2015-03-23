@@ -13,11 +13,10 @@
     "clone": "^1.0.1",
     "concat-stream": "^1.4.7",
     "detective": "^4.0.0",
-    "flatten": "^0.0.1",
-    "minimatch": "^2.0.4",
     "q": "^1.1.2",
     "sliced": "^0.0.5",
-    "through2": "^0.6.3"
+    "through2": "^0.6.3",
+    "vinyl": "^0.4.6"
   },
   "devDependencies": {
     "tape": "^3.5.0"
