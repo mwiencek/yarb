@@ -15,10 +15,10 @@
     "detective": "^4.0.0",
     "q": "^1.1.2",
     "sliced": "^0.0.5",
-    "through2": "^0.6.3",
     "vinyl": "^0.4.6"
   },
   "devDependencies": {
-    "tape": "^3.5.0"
+    "tape": "^3.5.0",
+    "through2": "^0.6.3"
   }
 }
