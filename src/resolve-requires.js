@@ -3,16 +3,27 @@
 var bresolve = require('browser-resolve');
 var detective = require('detective');
 var Q = require('q');
+var bufferFile = require('./buffer-file.js');
 
-function resolveRequires(bundle, sourceFile) {
-    sourceFile._deps = {};
+function resolveBundleRequires(bundle) {
+    // our externals' requires must be resolved first
+    return Q.all(bundle._externals.map(resolveBundleRequires)).then(function () {
+        var promises = [];
+        for (var sourceFile of bundle._files.values()) {
+            promises.push(resolveFileRequires(bundle, sourceFile));
+        }
+        return Q.all(promises);
+    });
+}
 
-    var promises = [];
-    for (var id of (new Set(detective(sourceFile.contents)))) {
-        promises.push(resolveRequire(bundle, sourceFile, id));
-    }
-
-    return Q.all(promises);
+function resolveFileRequires(bundle, file) {
+    return bufferFile(bundle, file).then(function () {
+        var promises = [];
+        for (var id of (new Set(detective(file.contents)))) {
+            promises.push(resolveRequire(bundle, file, id));
+        }
+        return Q.all(promises);
+    });
 }
 
 function resolveRequire(bundle, sourceFile, id) {
@@ -24,73 +35,61 @@ function resolveRequire(bundle, sourceFile, id) {
     }
 
     // check if the id is exposed by an external bundle
-    findExternalFile(bundle, function (externalBundle) {
+    var file = findExternalFile(bundle._externals, function (externalBundle) {
         var filename = externalBundle._exposed.get(id);
         if (filename) {
             return externalBundle._files.get(filename);
         }
-    }).then(
-        resolved,
-        function () {
-            bresolve(id, {filename: sourceFile.path}, function (error, depFilename) {
-                if (error) {
-                    deferred.reject(error);
-                    return;
-                }
+    });
 
-                // check if the file exists in an external bundle
-                findExternalFile(bundle, function (externalBundle) {
-                    return externalBundle._files.get(depFilename);
-                }).then(
-                    resolved,
-                    function () {
-                        // id is not a path; make sure we expose the actual resolved path,
-                        // so dependent bundles can require the same identifer from us.
-                        if (!/^(\.\/|\/|\.\.\/)/.test(id) && !bundle._exposed.has(id)) {
-                            bundle._exposed.set(id, depFilename);
-                        }
-
-                        // wasn't found in any external bundle, add it to ours
-                        bundle.require(depFilename);
-                        bundle._readFile(bundle._files.get(depFilename)).then(resolved, deferred.reject);
-                    }
-                );
-            });
-        }
-    );
-
-    return deferred.promise;
-}
-
-function findExternalFile(bundle, callback) {
-    var externals = bundle._externals;
-    var deferred = Q.defer();
-
-    if (externals && externals.length) {
-        Q.any(externals.map(function (b) {
-            var deferredMatch = Q.defer();
-
-            b._readFiles().then(
-                function () {
-                    var file = callback(b);
-                    if (file) {
-                        deferredMatch.resolve(file);
-                    } else {
-                        deferredMatch.reject();
-                    }
-                },
-                function (error) {
-                    throw error;
-                }
-            );
-
-            return deferredMatch.promise;
-        })).then(deferred.resolve, deferred.reject);
-    } else {
-        deferred.reject();
+    if (file) {
+        resolved(file);
+        return deferred.promise;
     }
 
+    bresolve(id, {filename: sourceFile.path}, function (err, depFilename) {
+        if (err) {
+            deferred.reject(err);
+            return;
+        }
+
+        // check if the file exists in an external bundle
+        var file = findExternalFile(bundle._externals, function (externalBundle) {
+            return externalBundle._files.get(depFilename);
+        });
+
+        if (file) {
+            resolved(file);
+            return;
+        }
+
+        // id is not a path; make sure we expose the actual resolved path,
+        // so dependent bundles can require the same identifer from us.
+        if (!/^(\.\/|\/|\.\.\/)/.test(id) && !bundle._exposed.has(id)) {
+            bundle._exposed.set(id, depFilename);
+        }
+
+        // wasn't found in any external bundle, add it to ours
+        bundle.require(depFilename);
+
+        var depFile = bundle._files.get(depFilename);
+
+        resolveFileRequires(bundle, depFile).then(
+            function () {resolved(depFile)},
+            deferred.reject
+        );
+    });
+
     return deferred.promise;
 }
 
-module.exports = resolveRequires;
+function findExternalFile(externals, callback) {
+    for (var i = 0, len = externals.length; i < len; i++) {
+        var file = callback(externals[i]);
+        if (file) {
+            return file;
+        }
+    }
+}
+
+module.exports = resolveBundleRequires;

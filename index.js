@@ -3,28 +3,10 @@
 var bpack = require('browser-pack');
 var clone = require('clone');
 var concat = require('concat-stream');
-var fs = require('fs');
-var path = require('path');
 var Q = require('q');
 var sliced = require('sliced');
-var File = require('./src/file.js');
+var getVinyl = require('./src/file.js');
 var resolveRequires = require('./src/resolve-requires.js');
-
-function getVinyls(files) {
-    return [].concat(files).map(getVinyl);
-}
-
-function getVinyl(file) {
-    if (typeof file === 'string') {
-        return new File({path: path.resolve(file)});
-    }
-
-    if (!file.path || !path.isAbsolute(file.path)) {
-        throw new Error('file.path must be non-empty and absolute');
-    }
-
-    return file;
-}
 
 function Bundle(files, options) {
     this._options = clone(options || {}, true, 1);
@@ -53,7 +35,11 @@ function Bundle(files, options) {
 }
 
 Bundle.prototype._require = function (files) {
-    files.forEach(function (file) {this._files.set(file.path, file)}, this);
+    files.forEach(function (file) {
+        if (!this._files.has(file.path)) {
+            this._files.set(file.path, file);
+        }
+    }, this);
     return this;
 };
 
@@ -88,7 +74,7 @@ Bundle.prototype.bundle = function (callback) {
     var self = this;
     var pack = bpack({raw: true, hasExports: this._hasExports});
 
-    this._readFiles().then(
+    resolveRequires(this).then(
         function () {
             var sorted = [];
 
@@ -127,70 +113,9 @@ Bundle.prototype.bundle = function (callback) {
     return pack;
 };
 
-Bundle.prototype._readFiles = function () {
-    var promises = [];
-    for (var file of this._files.values()) {
-        promises.push(this._readFile(file));
-    }
-
-    return Q.all(promises);
-};
-
-Bundle.prototype._readFile = function (file) {
-    var promise = this._buffering.get(file.path);
-    if (promise) {
-        return promise;
-    }
-
-    var self = this;
-    var deferred = Q.defer();
-
-    var bufferThenResolve = function () {
-        file._buffer(self._transforms).then(
-            function () {
-                resolveRequires(self, file).then(readFinished, deferred.reject);
-            },
-            deferred.reject
-        );
-    };
-
-    var readFinished = function () {
-        deferred.resolve(file);
-        self._buffering.delete(file.path);
-    };
-
-    if (file.isBuffer()) {
-        bufferThenResolve();
-        return deferred.promise;
-    }
-
-    Q.nfcall(fs.stat, file.path).then(
-        function (stats) {
-            var oldStats = file.stats;
-            file.stats = stats;
-
-            if (!oldStats || oldStats.mtime < stats.mtime) {
-                file._transforms = false;
-
-                bufferThenResolve();
-            } else {
-                // mtime hasn't changed, return cached buffer
-                readFinished();
-            }
-        },
-        function (err) {
-            // allow files to not exist on disk if a buffer/stream is provided
-            if (err.code !== 'ENOENT' || file.isNull()) {
-                deferred.reject(err);
-            } else {
-                bufferThenResolve();
-            }
-        }
-    );
-
-    this._buffering.set(file.path, deferred.promise);
-    return deferred.promise;
-};
+function getVinyls(files) {
+    return [].concat(files).map(getVinyl);
+}
 
 module.exports = function (options) {
     return new Bundle(options);
