@@ -8,6 +8,10 @@ While yarb shares API similarities with browserify and is even compatible with b
 
 This project served two purposes for me: (1) fixing a frustation after failing to patch browserify to suit my needs, and (2) learning better how to write node modules. Use browserify unless you know what you’re doing.
 
+## Notes
+
+Internally, yarb stores files as [vinyl](https://github.com/wearefractal/vinyl) objects, and even accepts these as input wherever a path is accepted. This allows passing in existing buffers/streams by just wrapping them in vinyl objects beforehand. The catch is that all vinyls must have a `path` property that is both unique to the bundle and absolute (though it doesn't have to exist on disk). Paths are how modules reference each other, after all (even `browser` field IDs must resolve to paths), with one exception: the `expose` method could theoretically support exposing a vinyl buffer/stream as an arbitrary ID, since those always take precedence over paths. That’d be a rare case, since the vast majority of things will be sourced from disk. Giving a fake but unique path where one doesn't exist will otherwise suffice.
+
 ## License
 
 MIT
