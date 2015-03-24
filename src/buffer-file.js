@@ -15,9 +15,6 @@ function bufferFile(bundle, file) {
     promise = new Promise(function (resolve, reject) {
         fs.stat(file.path, function (err, stats) {
             if (err) {
-                if (err.code === 'ENOENT') {
-                    file._exists = false;
-                }
                 if (err.code !== 'ENOENT' || file.isNull()) {
                     // only allow files to not exist on disk if a buffer/stream is provided
                     reject(err);
