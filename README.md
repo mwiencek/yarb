@@ -18,7 +18,7 @@ The catch is that all vinyls must have a `path` property that is both unique to 
 
 ### var bundle = yarb(files [, options])
 
-Creates a new bundle with `files` as entry points, i.e. modules executed when the bundle is loaded. `files` can be a single file or an array of files consisting of paths or vinyl objects.
+Returns a new bundle with `files` as entry points, i.e. modules executed when the bundle is loaded. `files` can be a single file or an array of files consisting of paths or vinyl objects.
 
 Current `options` are: `debug`, which enables source maps.
 
@@ -26,25 +26,37 @@ Current `options` are: `debug`, which enables source maps.
 
 Adds additional entry files to `bundle`. See above for accepted inputs for `files`.
 
+Returns `bundle`.
+
 ### bundle.require(files)
 
 Adds non-entry files to be included in `bundle`. Only necessary if you want to include files that aren’t referenced by any entry files, or are referenced dynamically (e.g. `require('foo' + bar)`);
+
+Returns `bundle`.
 
 ### bundle.external(externalBundle)
 
 Looks to `externalBundle` when resolving required paths/IDs, excluding all modules that exist in it. Obviously, `externalBundle` must be loaded on the page before anything in `bundle` that references it executes.
 
+Returns `bundle`.
+
 ### bundle.expose(file, id)
 
 Calls `bundle.require` on `file` and aliases it as `id` for the current bundle and external bundles. `require(id)` will always takes precedence over normal path-resolution and always resolve to `file`.
+
+Returns `bundle`.
 
 ### bundle.transform(transform)
 
 Adds browserify-compatible `transform` to execute on all file contents before being parsed for `require` calls.
 
+Returns `bundle`.
+
 ### bundle.bundle([callback])
 
-Bundles everything together for the browser. Returns a readable stream that can be piped to disk or elsewhere. If a node-style `callback` is given, it’ll execute on completion with the arguments `(error, buffer)`.
+Bundles everything together for the browser.
+
+Returns a readable stream that can be piped to disk or elsewhere. If a node-style `callback` is given, it’ll execute on completion with the arguments `(error, buffer)`.
 
 ## License
 
