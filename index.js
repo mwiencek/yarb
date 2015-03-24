@@ -18,7 +18,10 @@ function Bundle(files, options) {
 
     // all files included in the bundle
     this._files = new Map();
-    this.add(files);
+
+    if (files) {
+        this.add(files);
+    }
 
     // external bundles whose modules will be excluded from our own
     this._externals = [];

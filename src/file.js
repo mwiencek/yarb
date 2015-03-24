@@ -18,7 +18,9 @@ function addProps(file) {
         _hash: sha1(file.path),
         _deps: {},
         // whether transforms were run
-        _transformed: false
+        _transformed: false,
+        // whether the file is assumed to exist
+        _exists: true
     });
 }
 
