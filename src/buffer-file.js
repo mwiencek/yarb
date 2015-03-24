@@ -3,7 +3,7 @@
 var assign = require('object-assign');
 var concat = require('concat-stream');
 var fs = require('fs');
-var Q = require('q');
+var Promise = require('promise');
 var bufferStream = require('./buffer-stream.js');
 
 function bufferFile(bundle, file) {
@@ -12,7 +12,7 @@ function bufferFile(bundle, file) {
         return promise;
     }
 
-    promise = Q.Promise(function (resolve, reject) {
+    promise = new Promise(function (resolve, reject) {
         fs.stat(file.path, function (err, stats) {
             if (err) {
                 if (err.code !== 'ENOENT' || file.isNull()) {
@@ -55,7 +55,7 @@ function readFileContentsToBuffer(bundle, file) {
         stream = stream.pipe(transform.apply(null, [file.path].concat(args.slice(1))));
     });
 
-    return Q.Promise(function (resolve, reject) {
+    return new Promise(function (resolve, reject) {
         stream.on('error', reject).pipe(concat(function (buf) {
             resolve(assign(file, {contents: buf, _transformed: true}));
         }));

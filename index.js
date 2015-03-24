@@ -3,7 +3,6 @@
 var bpack = require('browser-pack');
 var clone = require('clone');
 var concat = require('concat-stream');
-var Q = require('q');
 var sliced = require('sliced');
 var getVinyl = require('./src/file.js');
 var resolveRequires = require('./src/resolve-requires.js');

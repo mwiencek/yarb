@@ -14,7 +14,7 @@
     "concat-stream": "^1.4.7",
     "detective": "^4.0.0",
     "object-assign": "^2.0.0",
-    "q": "^1.1.2",
+    "promise": "^6.1.0",
     "sliced": "^0.0.5",
     "vinyl": "^0.4.6"
   },
