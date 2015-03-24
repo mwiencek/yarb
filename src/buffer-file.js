@@ -1,5 +1,6 @@
 'use strict';
 
+var assign = require('object-assign');
 var concat = require('concat-stream');
 var fs = require('fs');
 var Q = require('q');
@@ -29,10 +30,10 @@ function bufferFile(bundle, file) {
 
                 if (!oldStats || oldStats.mtime < stats.mtime) {
                     // always assume the contents have changed
-                    file._deps = {};
-                    file._transformed = false;
-
-                    readFileContentsToBuffer(bundle, file).then(resolve, reject);
+                    readFileContentsToBuffer(
+                        bundle,
+                        assign(file, {_deps: {}, _transformed: false})
+                    ).then(resolve, reject);
                 } else {
                     // mtime hasn't changed, return cached buffer
                     resolve(file);
@@ -61,9 +62,7 @@ function readFileContentsToBuffer(bundle, file) {
 
     return Q.Promise(function (resolve, reject) {
         stream.on('error', reject).pipe(concat(function (buf) {
-            file.contents = buf;
-            file._transformed = true;
-            resolve(file);
+            resolve(assign(file, {contents: buf, _transformed: true}));
         }));
     });
 }

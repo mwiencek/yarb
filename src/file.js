@@ -1,5 +1,6 @@
 'use strict';
 
+var assign = require('object-assign');
 var crypto = require('crypto');
 var path = require('path');
 var VinylFile = require('vinyl');
@@ -12,12 +13,13 @@ function File() {
 File.prototype = Object.create(VinylFile.prototype);
 
 function addProps(file) {
-    // data piped to browser-pack
-    file._hash = sha1(file.path);
-    file._deps = {};
-    // whether transforms were run
-    file._transformed = false;
-    return file;
+    return assign(file, {
+        // data piped to browser-pack
+        _hash: sha1(file.path),
+        _deps: {},
+        // whether transforms were run
+        _transformed: false
+    });
 }
 
 function sha1(str) {
