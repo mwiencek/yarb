@@ -98,11 +98,10 @@ Bundle.prototype.bundle = function (callback) {
             pack.end();
         },
         function (error) {
-            pack.emit('error', error);
-
             if (callback) {
                 callback(error, null);
             }
+            pack.emit('error', error);
         }
     );
 
