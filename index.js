@@ -75,8 +75,9 @@ Bundle.prototype.bundle = function (callback) {
 
     resolveRequires(this).then(
         function () {
-            var sorted = [];
+            self._buffering.clear();
 
+            var sorted = [];
             for (var filename of self._files.keys()) {
                 sorted.push(filename);
             }
@@ -97,9 +98,12 @@ Bundle.prototype.bundle = function (callback) {
             pack.end();
         },
         function (error) {
+            self._buffering.clear();
+
             if (callback) {
                 callback(error, null);
             }
+
             pack.emit('error', error);
         }
     );

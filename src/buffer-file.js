@@ -34,7 +34,6 @@ function bufferFile(bundle, file) {
                 // mtime hasn't changed, return cached buffer
                 resolve(file);
             }
-            bundle._buffering.delete(file.path);
         });
     });
 
