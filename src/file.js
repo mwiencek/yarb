@@ -6,16 +6,19 @@ var VinylFile = require('vinyl');
 
 function File() {
     VinylFile.apply(this, arguments);
-
-    // data piped to browser-pack
-    this._hash = sha1(this.path);
-    this._deps = {};
-
-    // whether transforms were run
-    this._transformed = false;
+    addProps(this);
 }
 
 File.prototype = Object.create(VinylFile.prototype);
+
+function addProps(file) {
+    // data piped to browser-pack
+    file._hash = sha1(file.path);
+    file._deps = {};
+    // whether transforms were run
+    file._transformed = false;
+    return file;
+}
 
 function sha1(str) {
     return crypto.createHash('sha1').update(str).digest('hex').substring(0, 7);
@@ -30,5 +33,5 @@ module.exports = function (file) {
         throw new Error('file.path must be non-empty and absolute');
     }
 
-    return file;
+    return addProps(file);
 };
