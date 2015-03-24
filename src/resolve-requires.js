@@ -32,12 +32,9 @@ function resolveRequire(bundle, sourceFile, id) {
         return Promise.resolve();
     }
 
-    // check if the id is exposed by an external bundle
-    var file = findExternalFile(bundle._externals, function (externalBundle) {
-        var filename = externalBundle._exposed.get(id);
-        if (filename) {
-            return externalBundle._files.get(filename);
-        }
+    // check if id is exposed by the current bundle or an external bundle
+    var file = getExposedFile(bundle, id) || findExternalFile(bundle._externals, function (externalBundle) {
+        return getExposedFile(externalBundle, id);
     });
 
     if (file) {
@@ -74,6 +71,13 @@ function findExternalFile(externals, callback) {
         if (file) {
             return file;
         }
+    }
+}
+
+function getExposedFile(bundle, id) {
+    var filename = bundle._exposed.get(id);
+    if (filename) {
+        return bundle._files.get(filename);
     }
 }
 

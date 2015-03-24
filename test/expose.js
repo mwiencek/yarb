@@ -1,5 +1,7 @@
+var File = require('vinyl');
 var fs = require('fs');
 var test = require('tape');
+var vm = require('vm');
 var yarb = require('../');
 
 test('expose', function (t) {
@@ -14,5 +16,22 @@ test('expose', function (t) {
 
     b2.bundle(function (err, buf) {
         t.ok(buf.equals(fs.readFileSync('expose/output2.js')));
+    });
+});
+
+test('expose within a single bundle', function (t) {
+    t.plan(1);
+
+    var b = yarb(new File({
+        path: '/fake/path',
+        contents: new Buffer('shim = require("shim")')
+    }));
+
+    b.expose('expose/shim.js', 'shim');
+
+    b.bundle(function (err, buf) {
+        var context = {};
+        vm.runInNewContext(buf.toString(), context);
+        t.deepEquals(context, {shim: 'shim'});
     });
 });
