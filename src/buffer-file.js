@@ -24,20 +24,15 @@ function bufferFile(bundle, file) {
                 } else {
                     readFileContentsToBuffer(bundle, file).then(resolve, reject);
                 }
+            } else if (!file.stats || file.stats.mtime < stats.mtime) {
+                // always assume the contents have changed
+                readFileContentsToBuffer(
+                    bundle,
+                    assign(file, {stats: stats, _deps: {}, _transformed: false})
+                ).then(resolve, reject);
             } else {
-                var oldStats = file.stats;
-                file.stats = stats;
-
-                if (!oldStats || oldStats.mtime < stats.mtime) {
-                    // always assume the contents have changed
-                    readFileContentsToBuffer(
-                        bundle,
-                        assign(file, {_deps: {}, _transformed: false})
-                    ).then(resolve, reject);
-                } else {
-                    // mtime hasn't changed, return cached buffer
-                    resolve(file);
-                }
+                // mtime hasn't changed, return cached buffer
+                resolve(file);
             }
             bundle._buffering.delete(file.path);
         });
