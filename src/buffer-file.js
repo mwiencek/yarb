@@ -56,6 +56,9 @@ function readFileContentsToBuffer(bundle, file) {
 
     return new Promise(function (resolve, reject) {
         stream.on('error', reject).pipe(concat(function (buf) {
+            if (typeof buf === 'string') {
+                buf = new Buffer(buf);
+            }
             resolve(assign(file, {contents: buf, _transformed: true}));
         }));
     });
