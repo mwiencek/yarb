@@ -42,20 +42,24 @@ function bufferFile(bundle, file) {
 };
 
 function readFileContentsToBuffer(bundle, file) {
-    var stream = contentsToStream(file);
+    return new Promise(function (resolve, reject) {
+        var contents = contentsToStream(file);
 
-    bundle._transforms.forEach(function (args) {
-        var transform = args[0];
-
-        if (typeof transform === 'string') {
-            transform = require(transform);
+        function append(through) {
+            contents = contents.on('error', reject).pipe(through);
         }
 
-        stream = stream.pipe(transform.apply(null, [file.path].concat(args.slice(1))));
-    });
+        bundle._transforms.forEach(function (args) {
+            var transform = args[0];
 
-    return new Promise(function (resolve, reject) {
-        stream.on('error', reject).pipe(concat(function (buf) {
+            if (typeof transform === 'string') {
+                transform = require(transform);
+            }
+
+            append(transform.apply(null, [file.path].concat(args.slice(1))));
+        });
+
+        append(concat(function (buf) {
             if (typeof buf === 'string') {
                 buf = new Buffer(buf);
             }

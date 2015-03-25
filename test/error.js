@@ -25,3 +25,15 @@ test('stream error', function (t) {
         t.equals(err.toString(), 'TypeError: Invalid non-string/buffer chunk');
     })
 });
+
+test('transform error', function (t) {
+    t.plan(1);
+
+    function throws() {
+        return new stream.Writable();
+    }
+
+    badBundle().transform(throws).bundle().on('error', function (err) {
+        t.equals(err.toString(), 'Error: Cannot pipe. Not readable.');
+    })
+});
