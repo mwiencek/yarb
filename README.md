@@ -16,7 +16,7 @@ The catch is that all vinyls must have a `path` property that is both unique to 
 
 ## API
 
-### var bundle = yarb([files [, options]])
+### var bundle = yarb([files[, options]])
 
 Returns a new bundle with `files` as entry points, i.e. modules executed when the bundle is loaded. `files` can be a single file or an array of files consisting of paths or vinyl objects.
 
