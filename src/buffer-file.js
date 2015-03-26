@@ -3,6 +3,7 @@
 var assign = require('object-assign');
 var concat = require('concat-stream');
 var fs = require('fs');
+var path = require('path');
 var Promise = require('promise');
 var bufferStream = require('./buffer-stream.js');
 
@@ -49,14 +50,24 @@ function readFileContentsToBuffer(bundle, file) {
             contents = contents.on('error', reject).pipe(through);
         }
 
-        bundle._transforms.forEach(function (args) {
-            var transform = args[0];
-
-            if (typeof transform === 'string') {
-                transform = require(transform);
+        var isExternal = true;
+        for (var entry of bundle._entries) {
+            if (path.relative(path.dirname(entry), file.path).split(path.sep).indexOf('node_modules') < 0) {
+                isExternal = false;
+                break;
             }
+        }
 
-            append(transform.apply(null, [file.path].concat(args.slice(1))));
+        bundle._transforms.forEach(function (args) {
+            var func = args[0];
+            var options = args[1];
+
+            if (!isExternal || (options && options.global)) {
+                if (typeof func === 'string') {
+                    func = require(func);
+                }
+                append(func.apply(null, [file.path].concat(args.slice(1))));
+            }
         });
 
         append(concat(function (buf) {
