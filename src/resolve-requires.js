@@ -8,41 +8,48 @@ var bufferFile = require('./buffer-file.js');
 
 function resolveBundleRequires(bundle) {
     // our externals' requires must be resolved first
-    return Promise.all(bundle._externals.map(resolveBundleRequires)).then(function () {
-        var promises = [];
-        for (var sourceFile of bundle._files.values()) {
-            promises.push(resolveFileRequires(bundle, sourceFile));
-        }
-        return Promise.all(promises);
+    var promise = Promise.resolve();
+
+    bundle._externals.forEach(function (externalBundle) {
+        promise = promise.then(resolveBundleRequires.bind(null, externalBundle));
     });
+
+    for (var sourceFile of bundle._files.values()) {
+        promise = promise.then(resolveFileRequires.bind(null, bundle, sourceFile));
+    }
+
+    return promise;
 }
 
 function resolveFileRequires(bundle, file) {
     return bufferFile(bundle, file).then(function () {
-        var promises = [];
+        var promise = Promise.resolve();
+
         for (var id of (new Set(detective(file.contents)))) {
-            promises.push(resolveRequire(bundle, file, id));
+            promise = promise.then(resolveRequire.bind(null, bundle, file, id));
         }
-        return Promise.all(promises);
+
+        return promise;
     });
 }
 
 function resolveRequire(bundle, sourceFile, id) {
-    function addDep(depFile) {
-        sourceFile._deps[id] = depFile._hash;
-    }
-
-    // check if id is exposed by the current bundle or an external bundle
-    var file = getExposedFile(bundle, id) || findExternalFile(bundle._externals, function (externalBundle) {
-        return getExposedFile(externalBundle, id);
-    });
-
-    if (file) {
-        addDep(file);
-        return Promise.resolve();
-    }
-
     return new Promise(function (resolve, reject) {
+        function addDep(depFile) {
+            sourceFile._deps[id] = depFile._hash;
+            resolve();
+        }
+
+        // check if id is exposed by the current bundle or an external bundle
+        var file = getExposedFile(bundle, id) || findExternalFile(bundle._externals, function (externalBundle) {
+            return getExposedFile(externalBundle, id);
+        });
+
+        if (file) {
+            addDep(file);
+            return;
+        }
+
         bresolve(id, {filename: sourceFile.path}, function (err, depFilename) {
             if (err) {
                 if (looksLikePath(id)) {
@@ -60,7 +67,6 @@ function resolveRequire(bundle, sourceFile, id) {
 
             if (file) {
                 addDep(file);
-                resolve();
                 return;
             }
 
@@ -74,11 +80,7 @@ function resolveRequire(bundle, sourceFile, id) {
             bundle.require(depFilename);
 
             var depFile = bundle._files.get(depFilename);
-
-            resolveFileRequires(bundle, depFile).done(function () {
-                addDep(depFile);
-                resolve();
-            });
+            resolveFileRequires(bundle, depFile).then(addDep.bind(null, depFile), reject);
         });
     });
 }
