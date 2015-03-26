@@ -2,7 +2,7 @@ require=(function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof requ
 // lib_plugin provides lib, so the bundle should provide both
 require('lib_plugin');
 
-// browser-field name
+// exposed name
 require('shim');
 
 module.exports = 'bundle1';

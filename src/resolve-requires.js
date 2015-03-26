@@ -1,39 +1,39 @@
 'use strict';
 
-var bresolve = require('browser-resolve');
 var detective = require('detective');
 var path = require('path');
 var Promise = require('promise');
 var bufferFile = require('./buffer-file.js');
+var looksLikePath = require('./looks-like-path.js');
 
-function resolveBundleRequires(bundle) {
+function resolveBundleRequires(bundle, resolver) {
     // our externals' requires must be resolved first
     var promise = Promise.resolve();
 
     bundle._externals.forEach(function (externalBundle) {
-        promise = promise.then(resolveBundleRequires.bind(null, externalBundle));
+        promise = promise.then(resolveBundleRequires.bind(null, externalBundle, resolver));
     });
 
     for (var sourceFile of bundle._files.values()) {
-        promise = promise.then(resolveFileRequires.bind(null, bundle, sourceFile));
+        promise = promise.then(resolveFileRequires.bind(null, bundle, sourceFile, resolver));
     }
 
     return promise;
 }
 
-function resolveFileRequires(bundle, file) {
+function resolveFileRequires(bundle, file, resolver) {
     return bufferFile(bundle, file).then(function () {
         var promise = Promise.resolve();
 
         for (var id of (new Set(detective(file.contents)))) {
-            promise = promise.then(resolveRequire.bind(null, bundle, file, id));
+            promise = promise.then(resolveRequire.bind(null, bundle, file, id, resolver));
         }
 
         return promise;
     });
 }
 
-function resolveRequire(bundle, sourceFile, id) {
+function resolveRequire(bundle, sourceFile, id, resolver) {
     return new Promise(function (resolve, reject) {
         function addDep(depFile) {
             sourceFile._deps[id] = depFile._hash;
@@ -50,7 +50,7 @@ function resolveRequire(bundle, sourceFile, id) {
             return;
         }
 
-        bresolve(id, {filename: sourceFile.path}, function (err, depFilename) {
+        resolver.resolve(id, sourceFile.path, function (err, depFilename) {
             if (err) {
                 if (looksLikePath(id)) {
                     depFilename = path.resolve(path.dirname(sourceFile.path), id);
@@ -80,7 +80,7 @@ function resolveRequire(bundle, sourceFile, id) {
             bundle.require(depFilename);
 
             var depFile = bundle._files.get(depFilename);
-            resolveFileRequires(bundle, depFile).then(addDep.bind(null, depFile), reject);
+            resolveFileRequires(bundle, depFile, resolver).then(addDep.bind(null, depFile), reject);
         });
     });
 }
@@ -99,10 +99,6 @@ function getExposedFile(bundle, id) {
     if (filename) {
         return bundle._files.get(filename);
     }
-}
-
-function looksLikePath(str) {
-    return /^(\.\/|\/|\.\.\/)/.test(str);
 }
 
 module.exports = resolveBundleRequires;

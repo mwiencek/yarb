@@ -5,7 +5,7 @@ var yarb = require('../');
 test('external', function (t) {
     t.plan(2);
 
-    var b1 = yarb('external/bundle1.js');
+    var b1 = yarb('external/bundle1.js').expose('external/shim.js', 'shim');
     var b2 = yarb('external/bundle2.js').external(b1);
 
     b1.bundle(function (err, buf) {
@@ -20,7 +20,7 @@ test('external', function (t) {
 test('external, reversed bundle order', function (t) {
     t.plan(2);
 
-    var b1 = yarb('external/bundle1.js');
+    var b1 = yarb('external/bundle1.js').expose('external/shim.js', 'shim');
     var b2 = yarb('external/bundle2.js').external(b1);
 
     b2.bundle(function (err, buf) {
