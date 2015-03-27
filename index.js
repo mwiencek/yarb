@@ -6,7 +6,7 @@ var concat = require('concat-stream');
 var sliced = require('sliced');
 var getVinyl = require('./src/file.js');
 var Resolver = require('./src/resolver.js');
-var resolveRequires = require('./src/resolve-requires.js');
+var resolveDeps = require('./src/deps.js');
 
 function Bundle(files, options) {
     this._options = clone(options || {}, true, 1);
@@ -77,7 +77,7 @@ Bundle.prototype.bundle = function (callback) {
     var self = this;
     var pack = bpack({raw: true, hasExports: this._hasExports});
 
-    resolveRequires(this, new Resolver()).then(
+    resolveDeps(this, new Resolver()).then(
         function () {
             self._buffering.clear();
 

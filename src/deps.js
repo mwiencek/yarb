@@ -6,22 +6,22 @@ var Promise = require('promise');
 var bufferFile = require('./buffer-file.js');
 var looksLikePath = require('./looks-like-path.js');
 
-function resolveBundleRequires(bundle, resolver) {
+function resolveBundleDeps(bundle, resolver) {
     // our externals' requires must be resolved first
     var promise = Promise.resolve();
 
     bundle._externals.forEach(function (externalBundle) {
-        promise = promise.then(resolveBundleRequires.bind(null, externalBundle, resolver));
+        promise = promise.then(resolveBundleDeps.bind(null, externalBundle, resolver));
     });
 
     for (var sourceFile of bundle._files.values()) {
-        promise = promise.then(resolveFileRequires.bind(null, bundle, sourceFile, resolver));
+        promise = promise.then(resolveFileDeps.bind(null, bundle, sourceFile, resolver));
     }
 
     return promise;
 }
 
-function resolveFileRequires(bundle, file, resolver) {
+function resolveFileDeps(bundle, file, resolver) {
     return bufferFile(bundle, file).then(function () {
         var promise = Promise.resolve();
 
@@ -80,7 +80,7 @@ function resolveRequire(bundle, sourceFile, id, resolver) {
             bundle.require(depFilename);
 
             var depFile = bundle._files.get(depFilename);
-            resolveFileRequires(bundle, depFile, resolver).then(addDep.bind(null, depFile), reject);
+            resolveFileDeps(bundle, depFile, resolver).then(addDep.bind(null, depFile), reject);
         });
     });
 }
@@ -101,4 +101,4 @@ function getExposedFile(bundle, id) {
     }
 }
 
-module.exports = resolveBundleRequires;
+module.exports = resolveBundleDeps;
