@@ -1,10 +1,10 @@
 'use strict';
 
 var assign = require('object-assign');
-var concat = require('concat-stream');
 var fs = require('fs');
 var path = require('path');
 var Promise = require('promise');
+var through2 = require('through2');
 var bufferStream = require('./buffer-stream.js');
 
 function bufferFile(bundle, file) {
@@ -70,11 +70,14 @@ function readFileContentsToBuffer(bundle, file) {
             }
         });
 
-        append(concat(function (buf) {
-            if (typeof buf === 'string') {
-                buf = new Buffer(buf);
-            }
-            resolve(assign(file, {contents: buf, _transformed: true}));
+        contents.on('end', function () {
+            resolve(assign(file, {contents: Buffer.concat(chunks), _transformed: true}));
+        });
+
+        var chunks = [];
+        append(through2(function (chunk, enc, cb) {
+            chunks.push(chunk);
+            cb();
         }));
     });
 }
