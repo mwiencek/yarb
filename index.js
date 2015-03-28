@@ -5,7 +5,7 @@ var clone = require('clone');
 var events = require('events');
 var sliced = require('sliced');
 var util = require('util');
-var buffer = require('./src/buffer');
+var concat = require('./src/util/concat.js');
 var getVinyl = require('./src/file.js');
 var Resolver = require('./src/resolver.js');
 var resolveDeps = require('./src/deps.js');
@@ -112,7 +112,7 @@ Bundle.prototype.bundle = function (callback) {
     });
 
     if (callback) {
-        buffer.stream2buffer(pack, callback);
+        concat(pack, callback);
     }
 
     return pack;

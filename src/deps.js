@@ -2,9 +2,9 @@
 
 var detective = require('detective');
 var path = require('path');
-var bufferFile = require('./buffer-file.js');
 var looksLikePath = require('./util/looksLikePath');
 var noError = require('./util/noError');
+var readFile = require('./readFile');
 var sequence = require('./util/sequence');
 
 function resolveBundleDeps(bundle, resolver, cb) {
@@ -34,7 +34,7 @@ function resolveBundleDeps(bundle, resolver, cb) {
 }
 
 function resolveFileDeps(bundle, file, resolver, cb) {
-    bufferFile(bundle, file, noError(cb, function (buf) {
+    readFile(bundle, file, noError(cb, function (buf) {
         var requires = new Set(detective(buf));
 
         function forEachId(id, cb) {
