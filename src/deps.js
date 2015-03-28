@@ -3,7 +3,7 @@
 var detective = require('detective');
 var path = require('path');
 var bufferFile = require('./buffer-file.js');
-var looksLikePath = require('./looks-like-path.js');
+var looksLikePath = require('./util/looksLikePath');
 var noError = require('./util/noError');
 var sequence = require('./util/sequence');
 

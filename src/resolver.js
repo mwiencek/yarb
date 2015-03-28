@@ -3,7 +3,7 @@ var path = require('path');
 var either = require('./resolve/either');
 var loadAsDirectory = require('./resolve/loadAsDirectory');
 var loadAsFile = require('./resolve/loadAsFile');
-var looksLikePath = require('./looks-like-path');
+var looksLikePath = require('./util/looksLikePath');
 var nodeModulePaths = require('./resolve/nodeModulePaths');
 var noError = require('./util/noError');
 
