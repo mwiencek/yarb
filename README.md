@@ -1,6 +1,6 @@
 # yarb
 
-yarb performs mostly the same task as [browserify](https://github.com/substack/node-browserify), and uses mostly the same internals: [browser-pack](https://github.com/substack/browser-pack), [node-browser-resolve](https://github.com/defunctzombie/node-browser-resolve), [node-detective](https://github.com/substack/node-detective).
+yarb performs mostly the same task as [browserify](https://github.com/substack/node-browserify), and uses some of the same internals ([browser-pack](https://github.com/substack/browser-pack), [node-detective](https://github.com/substack/node-detective)).
 
 yarb is much less flexible than browserify, but better at defining dependencies between bundles. In browserify, sharing files between bundles tends to require a lot of manual `expose` and `external` settings on each file. A yarb bundle’s `external` function only accepts other bundles as input, and the bundling process knows exactly which files are common to both.
 
