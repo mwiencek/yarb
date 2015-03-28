@@ -72,7 +72,7 @@ function resolveRequire(bundle, sourceFile, id, resolver, cb) {
         }
 
         // check if the file exists in an external bundle
-        var file = findExternalFile(bundle._externals, function (externalBundle) {
+        var file = bundle._files.get(depFilename) || findExternalFile(bundle._externals, function (externalBundle) {
             return externalBundle._files.get(depFilename);
         });
 
@@ -87,14 +87,12 @@ function resolveRequire(bundle, sourceFile, id, resolver, cb) {
             bundle._exposed.set(id, depFilename);
         }
 
-        // wasn't found in any external bundle, add it to ours
+        // wasn't found in our own bundle or any external one, add it to ours
         bundle.require(depFilename);
 
-        var depFile = bundle._files.get(depFilename);
+        file = bundle._files.get(depFilename);
 
-        resolveFileDeps(bundle, depFile, resolver, noError(cb, function () {
-            addDep(depFile);
-        }));
+        resolveFileDeps(bundle, file, resolver, noError(cb, addDep.bind(null, file)));
     });
 }
 
