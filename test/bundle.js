@@ -59,11 +59,11 @@ test('multiple externals to the same bundle', function (t) {
                     {id: './a', sourceFile: 'bundle/c.js'}
                 ]
             );
+            Resolver.prototype.resolve = _resolve;
         }
     }
 
     // execute both in the same call stack to see how resolves are minimized
     b.bundle(done);
     c.bundle(done);
-    Resolver.prototype.resolve = _resolve;
 });

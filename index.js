@@ -2,8 +2,10 @@
 
 var bpack = require('browser-pack');
 var clone = require('clone');
-var concat = require('concat-stream');
+var events = require('events');
 var sliced = require('sliced');
+var util = require('util');
+var buffer = require('./src/buffer');
 var getVinyl = require('./src/file.js');
 var Resolver = require('./src/resolver.js');
 var resolveDeps = require('./src/deps.js');
@@ -30,12 +32,14 @@ function Bundle(files, options) {
     // custom dependency names
     this._exposed = new Map();
 
-    // paths -> promises to vinyls being read into buffers
-    this._buffering = new Map();
-
     // controls whether bpack prelude includes require= prefix
     this._hasExports = false;
+
+    // whether we have a pending resolve action
+    this._resolvingDeps = false;
 }
+
+util.inherits(Bundle, events.EventEmitter);
 
 Bundle.prototype._require = function (files) {
     files.forEach(function (file) {
@@ -77,43 +81,38 @@ Bundle.prototype.bundle = function (callback) {
     var self = this;
     var pack = bpack({raw: true, hasExports: this._hasExports});
 
-    resolveDeps(this, new Resolver()).then(
-        function () {
-            self._buffering.clear();
-
-            var sorted = [];
-            for (var filename of self._files.keys()) {
-                sorted.push(filename);
-            }
-
-            sorted.sort().forEach(function (filename) {
-                var file = self._files.get(filename);
-
-                pack.write({
-                    id: file._hash,
-                    deps: file._deps,
-                    sourceFile: file.path,
-                    source: file.contents,
-                    entry: self._entries.has(filename),
-                    nomap: !self._options.debug
-                });
-            });
-
-            pack.end();
-        },
-        function (error) {
-            self._buffering.clear();
-
+    resolveDeps(this, new Resolver(), function (err) {
+        if (err) {
             if (callback) {
-                callback(error, null);
+                callback(err, null);
             }
-
-            pack.emit('error', error);
+            pack.emit('error', err);
+            return;
         }
-    );
+
+        var sorted = [];
+        for (var filename of self._files.keys()) {
+            sorted.push(filename);
+        }
+
+        sorted.sort().forEach(function (filename) {
+            var file = self._files.get(filename);
+
+            pack.write({
+                id: file._hash,
+                deps: file._deps,
+                sourceFile: file.path,
+                source: file.contents,
+                entry: self._entries.has(filename),
+                nomap: !self._options.debug
+            });
+        });
+
+        pack.end();
+    });
 
     if (callback) {
-        return pack.pipe(concat(function (buf) {callback(null, buf)}));
+        buffer.stream2buffer(pack, callback);
     }
 
     return pack;

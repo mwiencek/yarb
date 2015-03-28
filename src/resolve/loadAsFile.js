@@ -1,7 +1,7 @@
 'use strict';
 
 var isFile = require('./isFile');
-var noError = require('./noError');
+var noError = require('../util/noError');
 
 module.exports = function loadAsFile(x, cb) {
     isFile(x, noError(cb, function (result) {

@@ -1,12 +1,11 @@
 var fs = require('fs');
 var path = require('path');
-var Promise = require('promise');
 var either = require('./resolve/either');
 var loadAsDirectory = require('./resolve/loadAsDirectory');
 var loadAsFile = require('./resolve/loadAsFile');
 var looksLikePath = require('./looks-like-path');
 var nodeModulePaths = require('./resolve/nodeModulePaths');
-var noError = require('./resolve/noError');
+var noError = require('./util/noError');
 
 // http://nodejs.org/docs/v0.4.8/api/all.html#all_Together...
 // does not handle: core modules, binary addons, or "browser" field names

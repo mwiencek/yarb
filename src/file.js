@@ -2,6 +2,7 @@
 
 var assign = require('object-assign');
 var crypto = require('crypto');
+var events = require('events');
 var path = require('path');
 var VinylFile = require('vinyl');
 
@@ -35,5 +36,5 @@ module.exports = function (file) {
         throw new Error('file.path must be non-empty and absolute');
     }
 
-    return addProps(file);
+    return addProps(file.clone());
 };
