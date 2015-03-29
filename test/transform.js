@@ -1,19 +1,30 @@
+var envify = require('envify/custom');
 var fs = require('fs');
 var test = require('tape');
 var yarb = require('../');
-var through2 = require('through2');
 
 test('transform', function (t) {
     t.plan(1);
 
-    yarb('./transform/input.js')
-        .transform(function () {
-            return through2(function (chunk, enc, cb) {
-                this.push(new Buffer(chunk.toString().replace('process.env.foo', "'bar'")));
-                cb();
-            })
-        })
+    yarb('./transform/input1.js')
+        .transform(envify({foo: 'bar'}))
         .bundle(function (err, buf) {
-            t.ok(buf.equals(fs.readFileSync('./transform/output.js')));
+            t.ok(buf.equals(fs.readFileSync('./transform/output1.js')));
+        });
+});
+
+test('global setting', function (t) {
+    t.plan(2);
+
+    yarb('./transform/input2.js')
+        .transform(envify({NODE_ENV: 'production'}))
+        .bundle(function (err, buf) {
+            t.ok(buf.equals(fs.readFileSync('./transform/output2.js')));
+        });
+
+    yarb('./transform/input2.js')
+        .transform(envify({NODE_ENV: 'production'}), {global: true})
+        .bundle(function (err, buf) {
+            t.ok(buf.equals(fs.readFileSync('./transform/output2-global.js')));
         });
 });
