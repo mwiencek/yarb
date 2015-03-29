@@ -72,7 +72,7 @@ function resolveRequire(bundle, sourceFile, id, resolver, cb) {
             }
         }
 
-        // check if the file exists in an external bundle
+        // check if the file already exists in this bundle or an external one
         var file = bundle._files[depFilename] || findExternalFile(bundle._externals, function (externalBundle) {
             return externalBundle._files[depFilename];
         });
