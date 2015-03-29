@@ -43,7 +43,7 @@ util.inherits(Bundle, events.EventEmitter);
 
 Bundle.prototype._require = function (files) {
     files.forEach(function (file) {
-        if (!this._files.has(file.path)) {
+        if (!this.has(file.path)) {
             this._files.set(file.path, file);
         }
     }, this);
@@ -116,6 +116,10 @@ Bundle.prototype.bundle = function (callback) {
     }
 
     return pack;
+};
+
+Bundle.prototype.has = function (path) {
+    return this._files.has(path);
 };
 
 function getVinyls(files) {

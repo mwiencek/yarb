@@ -60,6 +60,10 @@ Bundles everything together for the browser.
 
 Returns a readable stream that can be piped to disk or elsewhere. If a node-style `callback` is given, it’ll execute on completion with the arguments `(error, buffer)`.
 
+### bundle.has(path)
+
+Returns `true` if the bundle includes the file located at `path` in its output, otherwise `false`. Will only give accurate results after `bundle()` is called.
+
 ## License
 
 MIT
