@@ -3,6 +3,7 @@
 var bpack = require('browser-pack');
 var clone = require('clone');
 var events = require('events');
+var path = require('path');
 var sliced = require('sliced');
 var util = require('util');
 var concat = require('./src/util/concat.js');
@@ -113,8 +114,8 @@ Bundle.prototype.bundle = function (callback) {
     return pack;
 };
 
-Bundle.prototype.has = function (path) {
-    return path in this._files;
+Bundle.prototype.has = function (filename) {
+    return path.resolve(filename) in this._files;
 };
 
 function getVinyls(files) {
