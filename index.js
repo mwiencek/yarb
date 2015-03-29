@@ -17,10 +17,10 @@ function Bundle(files, options) {
     this._transforms = [];
 
     // filenames executed when the bundle is loaded
-    this._entries = new Set();
+    this._entries = Object.create(null);
 
     // all files included in the bundle
-    this._files = new Map();
+    this._files = Object.create(null);
 
     if (files) {
         this.add(files);
@@ -30,7 +30,7 @@ function Bundle(files, options) {
     this._externals = [];
 
     // custom dependency names
-    this._exposed = new Map();
+    this._exposed = Object.create(null);
 
     // controls whether bpack prelude includes require= prefix
     this._hasExports = false;
@@ -44,7 +44,7 @@ util.inherits(Bundle, events.EventEmitter);
 Bundle.prototype._require = function (files) {
     files.forEach(function (file) {
         if (!this.has(file.path)) {
-            this._files.set(file.path, file);
+            this._files[file.path] = file;
         }
     }, this);
     return this;
@@ -56,13 +56,13 @@ Bundle.prototype.require = function (files) {
 
 Bundle.prototype.add = function (files) {
     files = getVinyls(files);
-    files.forEach(function (file) {this._entries.add(file.path)}, this);
+    files.forEach(function (file) {this._entries[file.path] = true}, this);
     return this._require(files);
 };
 
 Bundle.prototype.expose = function (file, id) {
     file = getVinyl(file);
-    this._exposed.set(id, file.path);
+    this._exposed[id] = file.path;
     return this._require([file]);
 };
 
@@ -90,20 +90,15 @@ Bundle.prototype.bundle = function (callback) {
             return;
         }
 
-        var sorted = [];
-        for (var filename of self._files.keys()) {
-            sorted.push(filename);
-        }
-
-        sorted.sort().forEach(function (filename) {
-            var file = self._files.get(filename);
+        Object.keys(self._files).sort().forEach(function (filename) {
+            var file = self._files[filename];
 
             pack.write({
                 id: file._hash,
                 deps: file._deps,
                 sourceFile: file.path,
                 source: file.contents,
-                entry: self._entries.has(filename),
+                entry: filename in self._entries,
                 nomap: !self._options.debug
             });
         });
@@ -119,7 +114,7 @@ Bundle.prototype.bundle = function (callback) {
 };
 
 Bundle.prototype.has = function (path) {
-    return this._files.has(path);
+    return path in this._files;
 };
 
 function getVinyls(files) {

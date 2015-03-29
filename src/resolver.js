@@ -11,18 +11,18 @@ var noError = require('./util/noError');
 // does not handle: core modules, binary addons, or "browser" field names
 
 function Resolver() {
-    this._resolveCache = new Map();
+    this._resolveCache = Object.create(null);
 }
 
 Resolver.prototype._loadAsFileOrDirectory = function (x, cb) {
     var cache = this._resolveCache;
 
-    if (cache.has(x)) {
-        cb(null, cache.get(x));
+    if (x in cache) {
+        cb(null, cache[x]);
     } else {
         var done = noError(cb, function (resolved) {
             if (resolved) {
-                cache.set(x, resolved);
+                cache[x] = resolved;
             }
             cb(null, resolved);
         });

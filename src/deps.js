@@ -1,5 +1,6 @@
 'use strict';
 
+var arrayUniq = require('array-uniq');
 var detective = require('detective');
 var path = require('path');
 var looksLikePath = require('./util/looksLikePath');
@@ -26,16 +27,16 @@ function resolveBundleDeps(bundle, resolver, cb) {
     };
 
     sequence(bundle._externals, forEachBundle, noError(finish, function () {
-        function forEachFile(file, cb) {
-            resolveFileDeps(bundle, file, resolver, cb);
+        function forEachFile(filename, cb) {
+            resolveFileDeps(bundle, bundle._files[filename], resolver, cb);
         }
-        sequence(bundle._files.values(), forEachFile, finish);
+        sequence(Object.keys(bundle._files), forEachFile, finish);
     }));
 }
 
 function resolveFileDeps(bundle, file, resolver, cb) {
     readFile(bundle, file, noError(cb, function (buf) {
-        var requires = new Set(detective(buf));
+        var requires = arrayUniq(detective(buf));
 
         function forEachId(id, cb) {
             resolveRequire(bundle, file, id, resolver, cb);
@@ -72,8 +73,8 @@ function resolveRequire(bundle, sourceFile, id, resolver, cb) {
         }
 
         // check if the file exists in an external bundle
-        var file = bundle._files.get(depFilename) || findExternalFile(bundle._externals, function (externalBundle) {
-            return externalBundle._files.get(depFilename);
+        var file = bundle._files[depFilename] || findExternalFile(bundle._externals, function (externalBundle) {
+            return externalBundle._files[depFilename];
         });
 
         if (file) {
@@ -83,14 +84,14 @@ function resolveRequire(bundle, sourceFile, id, resolver, cb) {
 
         // id is not a path; make sure we expose the actual resolved path,
         // so dependent bundles can require the same identifer from us.
-        if (!looksLikePath(id) && !bundle._exposed.has(id)) {
-            bundle._exposed.set(id, depFilename);
+        if (!looksLikePath(id) && !(id in bundle._exposed)) {
+            bundle._exposed[id] = depFilename;
         }
 
         // wasn't found in our own bundle or any external one, add it to ours
         bundle.require(depFilename);
 
-        file = bundle._files.get(depFilename);
+        file = bundle._files[depFilename];
 
         resolveFileDeps(bundle, file, resolver, noError(cb, addDep.bind(null, file)));
     });
@@ -106,9 +107,9 @@ function findExternalFile(externals, callback) {
 }
 
 function getExposedFile(bundle, id) {
-    var filename = bundle._exposed.get(id);
+    var filename = bundle._exposed[id];
     if (filename) {
-        return bundle._files.get(filename);
+        return bundle._files[filename];
     }
 }
 

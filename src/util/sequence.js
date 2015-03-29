@@ -2,14 +2,9 @@
 
 var noError = require('./noError');
 
-module.exports = function sequence(iterable, forEach, cb) {
-    var items = [];
+module.exports = function sequence(items, forEach, cb) {
+    items = [].concat(items);
 
-    for (var item of iterable) {
-        items.push(item);
-    }
-
-    item = null;
     var count = items.length;
     var position = 0;
 

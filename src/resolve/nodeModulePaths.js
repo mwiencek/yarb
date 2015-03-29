@@ -2,13 +2,13 @@
 
 var path = require('path');
 
-var cache = new Map();
+var cache = Object.create(null);
 
 module.exports = function nodeModulePaths(start) {
     start = path.resolve(start);
 
-    if (cache.has(start)) {
-        return cache.get(start);
+    if (start in cache) {
+        return cache[start];
     }
 
     var parts = start.split(path.sep);
@@ -27,6 +27,6 @@ module.exports = function nodeModulePaths(start) {
         --i;
     }
 
-    cache.set(start, dirs);
+    cache[start] = dirs;
     return dirs;
 };

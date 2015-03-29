@@ -35,13 +35,9 @@ function fileNeedsRead(bundle, file) {
 function transformContents(bundle, file, cb) {
     var contents = contentsToStream(file).on('error', cb);
 
-    var isExternal = true;
-    for (var entry of bundle._entries) {
-        if (path.relative(path.dirname(entry), file.path).split(path.sep).indexOf('node_modules') < 0) {
-            isExternal = false;
-            break;
-        }
-    }
+    var isExternal = Object.keys(bundle._entries).some(function (entry) {
+        return path.relative(path.dirname(entry), file.path).split(path.sep).indexOf('node_modules') >= 0;
+    });
 
     bundle._transforms.forEach(function (args) {
         var func = args[0];
