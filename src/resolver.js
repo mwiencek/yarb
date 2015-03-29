@@ -14,23 +14,23 @@ function Resolver() {
     this._resolveCache = Object.create(null);
 }
 
-Resolver.prototype._loadAsFileOrDirectory = function (x, cb) {
+Resolver.prototype._loadAsFileOrDirectory = function (x, bundle, cb) {
     var cache = this._resolveCache;
 
     if (x in cache) {
         cb(null, cache[x]);
     } else {
-        var done = noError(cb, function (resolved) {
-            if (resolved) {
-                cache[x] = resolved;
+        var done = noError(cb, function (file) {
+            if (file) {
+                cache[x] = file;
             }
-            cb(null, resolved);
+            cb(null, file);
         });
-        loadAsFile(x, either(done, loadAsDirectory.bind(null, x, done)));
+        loadAsFile(x, bundle, either(done, loadAsDirectory.bind(null, x, bundle, done)));
     }
 };
 
-Resolver.prototype._loadNodeModules = function (x, start, cb) {
+Resolver.prototype._loadNodeModules = function (x, start, bundle, cb) {
     var self = this;
     var dirs = nodeModulePaths(start);
     var index = 0;
@@ -39,23 +39,23 @@ Resolver.prototype._loadNodeModules = function (x, start, cb) {
         if (index === dirs.length) {
             cb(null, null);
         } else {
-            self._loadAsFileOrDirectory(path.join(dirs[index++], x), either(cb, checkNext));
+            self._loadAsFileOrDirectory(path.join(dirs[index++], x), bundle, either(cb, checkNext));
         }
     }());
 };
 
-Resolver.prototype.resolve = function (x, sourceFile, cb) {
+Resolver.prototype.resolve = function (x, sourceFile, bundle, cb) {
     var self = this;
     var dirname = path.dirname(sourceFile);
 
     function tryNodeModules() {
-        self._loadNodeModules(x, dirname, either(cb, function () {
+        self._loadNodeModules(x, dirname, bundle, either(cb, function () {
             cb('module ' + JSON.stringify(x) + ' not found (required from ' + sourceFile + ')', null);
         }));
     }
 
     if (looksLikePath(x)) {
-        this._loadAsFileOrDirectory(path.resolve(dirname, x), either(cb, tryNodeModules));
+        this._loadAsFileOrDirectory(path.resolve(dirname, x), bundle, either(cb, tryNodeModules));
     } else {
         tryNodeModules();
     }

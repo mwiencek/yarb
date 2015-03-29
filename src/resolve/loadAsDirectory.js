@@ -5,15 +5,15 @@ var path = require('path');
 var either = require('./either');
 var loadAsFile = require('./loadAsFile');
 
-function tryIndexFile(x, cb) {
-    loadAsFile(path.join(x, 'index'), cb);
+function tryIndexFile(x, bundle, cb) {
+    loadAsFile(path.join(x, 'index'), bundle, cb);
 }
 
-module.exports = function loadAsDirectory(x, cb) {
+module.exports = function loadAsDirectory(x, bundle, cb) {
     fs.readFile(path.join(x, 'package.json'), function (err, buf) {
         if (err) {
             if (err.code === 'ENOENT') {
-                tryIndexFile(x, cb);
+                tryIndexFile(x, bundle, cb);
             } else {
                 cb(err, null);
             }
@@ -29,9 +29,9 @@ module.exports = function loadAsDirectory(x, cb) {
         }
 
         if (contents.main) {
-            loadAsFile(path.join(x, contents.main), either(cb, tryIndexFile.bind(null, x, cb)));
+            loadAsFile(path.join(x, contents.main), bundle, either(cb, tryIndexFile.bind(null, x, cb)));
         } else {
-            tryIndexFile(x, cb);
+            tryIndexFile(x, bundle, cb);
         }
     });
 };
