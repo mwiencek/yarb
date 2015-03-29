@@ -1,6 +1,6 @@
 {
   "name": "yarb",
-  "version": "0.1.1",
+  "version": "0.2.0",
   "description": "Yet another require() bundler",
   "keywords": ["require", "bundle", "browser"],
   "repository": {
