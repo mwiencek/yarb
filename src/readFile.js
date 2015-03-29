@@ -1,10 +1,10 @@
 'use strict';
 
 var assign = require('object-assign');
+var concat = require('concat-stream');
 var fs = require('fs');
 var path = require('path');
 var stream = require('stream');
-var concat = require('./util/concat');
 
 function readFile(bundle, file, cb) {
     fs.stat(file.path, function (err, stats) {
@@ -33,11 +33,15 @@ function fileNeedsRead(bundle, file) {
 }
 
 function transformContents(bundle, file, cb) {
-    var contents = contentsToStream(file).on('error', cb);
+    var contents = file;
 
     var isExternal = Object.keys(bundle._entries).some(function (entry) {
         return path.relative(path.dirname(entry), file.path).split(path.sep).indexOf('node_modules') >= 0;
     });
+
+    if (file.isNull()) {
+        file.contents = fs.createReadStream(file.path);
+    }
 
     bundle._transforms.forEach(function (args) {
         var func = args[0];
@@ -47,33 +51,18 @@ function transformContents(bundle, file, cb) {
             if (typeof func === 'string') {
                 func = require(func);
             }
-            contents = contents
-                .pipe(func.apply(null, [file.path].concat(args.slice(1))))
-                .on('error', cb);
+
+            // https://github.com/substack/node-browserify#btransformtr-opts
+            var ws = func.apply(null, [file.path].concat(args.slice(1)));
+
+            contents = contents.pipe(ws.on('error', cb));
         }
     });
 
-    concat(contents, function (err, buf) {
+    contents.pipe(concat({encoding: 'buffer'}, function (buf) {
         assign(file, {contents: buf, _transformed: true});
         cb(null, buf);
-    });
-}
-
-function contentsToStream(file) {
-    if (file.isStream()) {
-        return file.contents;
-    } else if (file.isBuffer()) {
-        // it'll be converted back to a buffer, but transforms require streams
-        return bufferToStream(file.contents);
-    } else {
-        return fs.createReadStream(file.path);
-    }
-}
-
-function bufferToStream(buffer) {
-    var rs = new stream.Readable();
-    rs._read = rs.push.bind(rs, buffer);
-    return rs;
+    }));
 }
 
 module.exports = readFile;
