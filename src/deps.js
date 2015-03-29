@@ -29,25 +29,22 @@ function resolveBundleDeps(bundle, resolver, cb) {
 
     sequence(bundle._externals, forEachBundle, noError(finish, function () {
         function forEachFile(filename, cb) {
-            resolveFileDeps(bundle, bundle._files[filename], resolver, cb);
+            resolveFileDeps(bundle._files[filename], bundle, resolver, cb);
         }
         sequence(Object.keys(bundle._files), forEachFile, finish);
     }));
 }
 
-function resolveFileDeps(bundle, file, resolver, cb) {
+function resolveFileDeps(file, bundle, resolver, cb) {
     readFile(bundle, file, noError(cb, function (buf) {
-        var requires = arrayUniq(detective(buf));
-
         function forEachId(id, cb) {
-            resolveRequire(bundle, file, id, resolver, cb);
+            resolveRequire(id, file, bundle, resolver, cb);
         }
-
-        sequence(requires, forEachId, cb);
+        sequence(arrayUniq(detective(buf)), forEachId, cb);
     }));
 }
 
-function resolveRequire(bundle, sourceFile, id, resolver, cb) {
+function resolveRequire(id, sourceFile, bundle, resolver, cb) {
     function addDep(depFile) {
         sourceFile._deps[id] = depFile._hash;
         cb(null);
@@ -73,7 +70,7 @@ function resolveRequire(bundle, sourceFile, id, resolver, cb) {
         if (depFile.isNull()) {
             // a null file can only mean it's not in any of our externals, so add it to our own
             bundle.require(depFile);
-            resolveFileDeps(bundle, depFile, resolver, noError(cb, addDep.bind(null, depFile)));
+            resolveFileDeps(depFile, bundle, resolver, noError(cb, addDep.bind(null, depFile)));
         } else {
             addDep(depFile);
         }
