@@ -1,3 +1,4 @@
+var bufferEqual = require('buffer-equal');
 var envify = require('envify/custom');
 var fs = require('fs');
 var test = require('tape');
@@ -9,7 +10,7 @@ test('transform', function (t) {
     yarb('./transform/input1.js')
         .transform(envify({foo: 'bar'}))
         .bundle(function (err, buf) {
-            t.ok(buf.equals(fs.readFileSync('./transform/output1.js')));
+            t.ok(bufferEqual(buf, fs.readFileSync('./transform/output1.js')));
         });
 });
 
@@ -19,12 +20,12 @@ test('global setting', function (t) {
     yarb('./transform/input2.js')
         .transform(envify({NODE_ENV: 'production'}))
         .bundle(function (err, buf) {
-            t.ok(buf.equals(fs.readFileSync('./transform/output2.js')));
+            t.ok(bufferEqual(buf, fs.readFileSync('./transform/output2.js')));
         });
 
     yarb('./transform/input2.js')
         .transform(envify({NODE_ENV: 'production'}), {global: true})
         .bundle(function (err, buf) {
-            t.ok(buf.equals(fs.readFileSync('./transform/output2-global.js')));
+            t.ok(bufferEqual(buf, fs.readFileSync('./transform/output2-global.js')));
         });
 });

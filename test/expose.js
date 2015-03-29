@@ -1,3 +1,4 @@
+var bufferEqual = require('buffer-equal');
 var File = require('vinyl');
 var fs = require('fs');
 var test = require('tape');
@@ -11,11 +12,11 @@ test('expose', function (t) {
     var b2 = yarb('expose/bundle2.js').external(b1);
 
     b1.bundle(function (err, buf) {
-        t.ok(buf.equals(fs.readFileSync('expose/output1.js')));
+        t.ok(bufferEqual(buf, fs.readFileSync('expose/output1.js')));
     });
 
     b2.bundle(function (err, buf) {
-        t.ok(buf.equals(fs.readFileSync('expose/output2.js')));
+        t.ok(bufferEqual(buf, fs.readFileSync('expose/output2.js')));
     });
 });
 

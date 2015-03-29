@@ -31,7 +31,7 @@ module.exports = function (file) {
         return new File({path: path.resolve(file)});
     }
 
-    if (!file.path || !path.isAbsolute(file.path)) {
+    if (!file.path || !/^\//.test(file.path)) {
         throw new Error('file.path must be non-empty and absolute');
     }
 

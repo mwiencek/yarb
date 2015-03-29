@@ -23,6 +23,7 @@
     "vinyl": "^0.4.6"
   },
   "devDependencies": {
+    "buffer-equal": "^0.0.1",
     "tape": "^3.5.0",
     "envify": "^3.4.0"
   }
