@@ -16,11 +16,10 @@ module.exports = function nodeModulePaths(start) {
         parts[0] = path.sep;
     }
 
-    var root = Math.max(parts.indexOf('node_modules'), 0);
     var i = parts.length - 1;
     var dirs = [];
 
-    while (i > root) {
+    while (i >= 0) {
         if (parts[i] !== 'node_modules') {
             dirs.push(path.join.apply(path, parts.slice(0, i + 1).concat('node_modules')));
         }
