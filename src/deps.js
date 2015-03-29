@@ -56,7 +56,9 @@ function resolveRequire(id, sourceFile, bundle, resolver, cb) {
     });
 
     if (file) {
-        addDep(file);
+        process.nextTick(function () {
+            addDep(file);
+        });
         return;
     }
 

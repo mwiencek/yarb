@@ -20,7 +20,9 @@ Resolver.prototype._loadAsFileOrDirectory = function (x, bundle, cb) {
     var cache = this._resolveCache;
 
     if (x in cache) {
-        cb(null, cache[x]);
+        process.nextTick(function () {
+            cb(null, cache[x]);
+        });
     } else {
         var done = noError(cb, function (file) {
             if (file) {
@@ -39,7 +41,9 @@ Resolver.prototype._loadNodeModules = function (x, start, bundle, cb) {
 
     (function checkNext() {
         if (index === dirs.length) {
-            cb(null, null);
+            process.nextTick(function () {
+                cb(null, null);
+            });
         } else {
             self._loadAsFileOrDirectory(path.join(dirs[index++], x), bundle, either(cb, checkNext));
         }
