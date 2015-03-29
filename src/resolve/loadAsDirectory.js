@@ -23,8 +23,8 @@ module.exports = function loadAsDirectory(x, cb) {
         var contents;
         try {
             contents = JSON.parse(buf.toString());
-        } catch (err) {
-            cb(err, null);
+        } catch (e) {
+            cb(e, null);
             return;
         }
 

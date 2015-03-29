@@ -55,9 +55,13 @@ Bundle.prototype.require = function (files) {
     return this._require(getVinyls(files));
 };
 
+Bundle.prototype._add = function (file) {
+    this._entries[file.path] = true;
+};
+
 Bundle.prototype.add = function (files) {
     files = getVinyls(files);
-    files.forEach(function (file) {this._entries[file.path] = true}, this);
+    files.forEach(this._add, this);
     return this._require(files);
 };
 

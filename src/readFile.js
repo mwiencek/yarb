@@ -26,7 +26,7 @@ function readFile(bundle, file, cb) {
             cb(null, file.contents);
         }
     });
-};
+}
 
 function fileNeedsRead(bundle, file) {
     return file._transformed || (!bundle._transforms.length && file.isBuffer());
