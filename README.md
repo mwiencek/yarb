@@ -48,9 +48,11 @@ Calls `bundle.require` on `file` and aliases it as `id` for the current bundle a
 
 Returns `bundle`.
 
-### bundle.transform(transform)
+### bundle.transform(transform[, options])
 
 Adds browserify-compatible `transform` to execute on all file contents before being parsed for `require` calls.
+
+By default, transforms are not run on any code contained within a `node_modules/` directory relative to any of the bundle’s entry files. yarb supports a `global` flag in `options` which serves the same purpose as the one in browserify and forces the transform to run on all code.
 
 Returns `bundle`.
 
