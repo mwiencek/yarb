@@ -38,7 +38,7 @@ Returns `bundle`.
 
 ### bundle.external(externalBundle)
 
-Looks to `externalBundle` when resolving required paths/IDs, excluding all modules that exist in it. Obviously, `externalBundle` must be loaded on the page before anything in `bundle` that references it executes.
+Looks to `externalBundle` when resolving required paths/IDs, excluding all modules that exist in it from `bundle`. Obviously, `externalBundle` must be loaded on the page before anything that references it in `bundle` executes. Note that `externalBundle`’s externals will also be recursively checked, allowing a chain of dependencies to form.
 
 Returns `bundle`.
 
