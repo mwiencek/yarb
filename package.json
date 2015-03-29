@@ -24,7 +24,11 @@
   },
   "devDependencies": {
     "buffer-equal": "^0.0.1",
+    "tap": "^0.7.1",
     "tape": "^3.5.0",
     "envify": "^3.4.0"
+  },
+  "scripts": {
+    "test": "tap test/*.js"
   }
 }
