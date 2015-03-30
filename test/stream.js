@@ -22,7 +22,7 @@ test('stream', function (t) {
     var b = yarb(new File({
         path: '/not/really/a/path',
         contents: rs
-    }));
+    }), {basedir: __dirname});
 
     b.bundle(function (err, buf) {
         var context = {};

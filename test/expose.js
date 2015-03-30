@@ -1,6 +1,7 @@
 var bufferEqual = require('buffer-equal');
 var File = require('vinyl');
 var fs = require('fs');
+var path = require('path');
 var test = require('tape');
 var vm = require('vm');
 var yarb = require('../');
@@ -8,15 +9,15 @@ var yarb = require('../');
 test('expose', function (t) {
     t.plan(2);
 
-    var b1 = yarb('expose/bundle1.js').expose('expose/shim.js', 'shim');
-    var b2 = yarb('expose/bundle2.js').external(b1);
+    var b1 = yarb('expose/bundle1.js', {basedir: __dirname}).expose('expose/shim.js', 'shim');
+    var b2 = yarb('expose/bundle2.js', {basedir: __dirname}).external(b1);
 
     b1.bundle(function (err, buf) {
-        t.ok(bufferEqual(buf, fs.readFileSync('expose/output1.js')));
+        t.ok(bufferEqual(buf, fs.readFileSync(path.resolve(__dirname, 'expose/output1.js'))));
     });
 
     b2.bundle(function (err, buf) {
-        t.ok(bufferEqual(buf, fs.readFileSync('expose/output2.js')));
+        t.ok(bufferEqual(buf, fs.readFileSync(path.resolve(__dirname, 'expose/output2.js'))));
     });
 });
 
@@ -26,7 +27,7 @@ test('expose within a single bundle', function (t) {
     var b = yarb(new File({
         path: '/fake/path',
         contents: new Buffer('shim = require("shim")')
-    }));
+    }), {basedir: __dirname});
 
     b.expose('expose/shim.js', 'shim');
 

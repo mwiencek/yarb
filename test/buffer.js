@@ -9,7 +9,7 @@ test('buffer', function (t) {
     var b = yarb(new File({
         path: '/not/really/a/path',
         contents: new Buffer('hi = false;')
-    }));
+    }), {basedir: __dirname});
 
     b.bundle(function (err, buf) {
         var context = {};

@@ -26,9 +26,9 @@ function sha1(str) {
     return crypto.createHash('sha1').update(str).digest('hex').substring(0, 7);
 }
 
-module.exports = function (file) {
+module.exports = function (file, basedir) {
     if (typeof file === 'string') {
-        return new File({path: path.resolve(file)});
+        return new File({path: path.resolve(basedir, file)});
     }
 
     if (!file.path || !/^\//.test(file.path)) {

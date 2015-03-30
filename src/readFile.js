@@ -48,9 +48,9 @@ function transformContents(bundle, file, cb) {
     var transforms = bundle._transforms.concat([[
         // https://github.com/substack/insert-module-globals
         'insert-module-globals', {
-            debug: bundle._options.debug,
+            debug: bundle._debug,
             global: true,
-            basedir: process.cwd(),
+            basedir: bundle._basedir,
             vars: insertGlobalsVars
         }
     ]]);

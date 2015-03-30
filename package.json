@@ -16,7 +16,6 @@
     "array-uniq": "^1.0.2",
     "browser-pack": "^4.0.1",
     "buffer": "^3.1.2",
-    "clone": "^1.0.1",
     "concat-stream": "^1.4.7",
     "detective": "^4.0.0",
     "events": "^1.0.2",
@@ -31,11 +30,11 @@
   },
   "devDependencies": {
     "buffer-equal": "^0.0.1",
-    "tap": "^0.7.1",
-    "tape": "^3.5.0",
-    "envify": "^3.4.0"
+    "envify": "^3.4.0",
+    "tap-spec": "^2.2.2",
+    "tape": "^3.5.0"
   },
   "scripts": {
-    "test": "tap test/*.js"
+    "test": "tape test | tap-spec"
   }
 }

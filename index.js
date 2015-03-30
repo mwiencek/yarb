@@ -1,7 +1,6 @@
 'use strict';
 
 var bpack = require('browser-pack');
-var clone = require('clone');
 var concat = require('concat-stream');
 var events = require('events');
 var path = require('path');
@@ -12,7 +11,10 @@ var Resolver = require('./src/resolver.js');
 var resolveDeps = require('./src/deps.js');
 
 function Bundle(files, options) {
-    this._options = clone(options || {}, true, 1);
+    options = options || {};
+
+    this._debug = !!options.debug;
+    this._basedir = options.basedir || process.cwd();
 
     // browserify-compatible source transforms
     this._transforms = [];
@@ -52,7 +54,7 @@ Bundle.prototype._require = function (files) {
 };
 
 Bundle.prototype.require = function (files) {
-    return this._require(getVinyls(files));
+    return this._require(getVinyls(files, this._basedir));
 };
 
 Bundle.prototype._add = function (file) {
@@ -60,13 +62,13 @@ Bundle.prototype._add = function (file) {
 };
 
 Bundle.prototype.add = function (files) {
-    files = getVinyls(files);
+    files = getVinyls(files, this._basedir);
     files.forEach(this._add, this);
     return this._require(files);
 };
 
 Bundle.prototype.expose = function (file, id) {
-    file = getVinyl(file);
+    file = getVinyl(file, this._basedir);
     this._exposed[id] = file.path;
     return this._require([file]);
 };
@@ -104,7 +106,7 @@ Bundle.prototype.bundle = function (callback) {
                 sourceFile: file.path,
                 source: file.contents,
                 entry: filename in self._entries,
-                nomap: !self._options.debug
+                nomap: !self._debug
             });
         });
 
@@ -121,13 +123,15 @@ Bundle.prototype.bundle = function (callback) {
 };
 
 Bundle.prototype.has = function (filename) {
-    return path.resolve(filename) in this._files;
+    return path.resolve(this._basedir, filename) in this._files;
 };
 
-function getVinyls(files) {
-    return [].concat(files).map(getVinyl);
+function getVinyls(files, basedir) {
+    return [].concat(files).map(function (file) {
+        return getVinyl(file, basedir);
+    });
 }
 
-module.exports = function (options) {
-    return new Bundle(options);
+module.exports = function (files, options) {
+    return new Bundle(files, options);
 };

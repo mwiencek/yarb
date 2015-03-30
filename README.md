@@ -22,7 +22,12 @@ The `expose` method could theoretically support exposing a vinyl buffer/stream a
 
 Returns a new bundle with `files` as entry points, i.e. modules executed when the bundle is loaded. `files` can be a single file or an array of files consisting of paths or vinyl objects.
 
-Current `options` are: `debug`, which enables source maps.
+Current `options` are:
+
+Option    | Purpose
+--------- | -------------
+`debug`   | Enables source maps.
+`basedir` | Sets the starting point for resolving relative paths.
 
 ### bundle.add(files)
 
