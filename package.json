@@ -15,11 +15,18 @@
   "dependencies": {
     "array-uniq": "^1.0.2",
     "browser-pack": "^4.0.1",
+    "buffer": "^3.1.2",
     "clone": "^1.0.1",
     "concat-stream": "^1.4.7",
     "detective": "^4.0.0",
+    "events": "^1.0.2",
+    "insert-module-globals": "^6.2.1",
     "object-assign": "^2.0.0",
+    "path-browserify": "^0.0.0",
+    "process": "^0.10.1",
     "sliced": "^0.0.5",
+    "stream-browserify": "^1.0.0",
+    "util": "^0.10.3",
     "vinyl": "^0.4.6"
   },
   "devDependencies": {

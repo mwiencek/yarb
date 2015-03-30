@@ -4,7 +4,6 @@ var assign = require('object-assign');
 var concat = require('concat-stream');
 var fs = require('fs');
 var path = require('path');
-var stream = require('stream');
 
 function readFile(bundle, file, cb) {
     fs.stat(file.path, function (err, stats) {
@@ -12,7 +11,7 @@ function readFile(bundle, file, cb) {
             if (err.code !== 'ENOENT' || file.isNull()) {
                 // only allow files to not exist on disk if a buffer/stream is provided
                 cb(err, null);
-            } else if (fileNeedsRead(bundle, file)) {
+            } else if (file._transformed) {
                 cb(null, file.contents);
             } else {
                 transformContents(bundle, file, cb);
@@ -28,12 +27,15 @@ function readFile(bundle, file, cb) {
     });
 }
 
-function fileNeedsRead(bundle, file) {
-    return file._transformed || (!bundle._transforms.length && file.isBuffer());
-}
+var insertGlobalsVars = {
+    // default insertion reveals full path
+    process: function () {
+        return "require('_process')";
+    }
+};
 
 function transformContents(bundle, file, cb) {
-    var contents = file;
+    var pipeline, contents;
 
     var isExternal = Object.keys(bundle._entries).some(function (entry) {
         return path.relative(path.dirname(entry), file.path).split(path.sep).indexOf('node_modules') >= 0;
@@ -43,7 +45,17 @@ function transformContents(bundle, file, cb) {
         file.contents = fs.createReadStream(file.path);
     }
 
-    bundle._transforms.forEach(function (args) {
+    var transforms = bundle._transforms.concat([[
+        // https://github.com/substack/insert-module-globals
+        'insert-module-globals', {
+            debug: bundle._options.debug,
+            global: true,
+            basedir: process.cwd(),
+            vars: insertGlobalsVars
+        }
+    ]]);
+
+    transforms.forEach(function (args) {
         var func = args[0];
         var options = args[1];
 
@@ -53,9 +65,14 @@ function transformContents(bundle, file, cb) {
             }
 
             // https://github.com/substack/node-browserify#btransformtr-opts
-            var ws = func.apply(null, [file.path].concat(args.slice(1)));
+            var ws = func.apply(null, [file.path].concat(args.slice(1))).on('error', cb);
 
-            contents = contents.pipe(ws.on('error', cb));
+            if (!pipeline) {
+                pipeline = ws;
+                contents = ws;
+            } else {
+                contents = contents.pipe(ws);
+            }
         }
     });
 
@@ -63,6 +80,8 @@ function transformContents(bundle, file, cb) {
         assign(file, {contents: buf, _transformed: true});
         cb(null, buf);
     }));
+
+    file.pipe(pipeline);
 }
 
 module.exports = readFile;
