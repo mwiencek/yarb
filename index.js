@@ -6,9 +6,10 @@ var events = require('events');
 var path = require('path');
 var sliced = require('sliced');
 var util = require('util');
-var getVinyl = require('./src/file.js');
-var Resolver = require('./src/resolver.js');
-var resolveDeps = require('./src/deps.js');
+var first = require('./src/util/first');
+var getVinyl = require('./src/file');
+var Resolver = require('./src/resolver');
+var resolveDeps = require('./src/deps');
 
 function Bundle(files, options) {
     options = options || {};
@@ -34,6 +35,9 @@ function Bundle(files, options) {
 
     // custom dependency names
     this._exposed = Object.create(null);
+
+    // inverse mapping of _exposed. not a real word
+    this._inposed = Object.create(null);
 
     // controls whether bpack prelude includes require= prefix
     this._hasExports = false;
@@ -70,7 +74,12 @@ Bundle.prototype.add = function (files) {
 Bundle.prototype.expose = function (file, id) {
     file = getVinyl(file, this._basedir);
     this._exposed[id] = file.path;
+    this._inposed[file.path] = id;
     return this._require([file]);
+};
+
+Bundle.prototype._externalID = function (file) {
+    return getInposed(file, this) || first(this._externals, getInposed.bind(null, file)) || file._hash;
 };
 
 Bundle.prototype.external = function (bundle) {
@@ -101,7 +110,7 @@ Bundle.prototype.bundle = function (callback) {
             var file = self._files[filename];
 
             pack.write({
-                id: file._hash,
+                id: self._externalID(file),
                 deps: file._deps,
                 sourceFile: file.path,
                 source: file.contents,
@@ -130,6 +139,10 @@ function getVinyls(files, basedir) {
     return [].concat(files).map(function (file) {
         return getVinyl(file, basedir);
     });
+}
+
+function getInposed(file, bundle) {
+    return bundle._inposed[file.path];
 }
 
 module.exports = function (files, options) {

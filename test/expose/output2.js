@@ -3,4 +3,4 @@ require('shim');
 
 module.exports = 'bundle2';
 
-},{"shim":"7b49c00"}]},{},["f0ca635"]);
+},{"shim":"shim"}]},{},["f0ca635"]);

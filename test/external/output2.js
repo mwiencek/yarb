@@ -4,4 +4,4 @@ require('shim');
 
 module.exports = 'bundle2';
 
-},{"lib":"d55f59c","shim":"02c2834"}]},{},["2fb6691"]);
+},{"lib":"d55f59c","shim":"shim"}]},{},["2fb6691"]);

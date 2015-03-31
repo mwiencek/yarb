@@ -46,7 +46,7 @@ function resolveFileDeps(file, bundle, resolver, cb) {
 
 function resolveRequire(id, sourceFile, bundle, resolver, cb) {
     function addDep(depFile) {
-        sourceFile._deps[id] = depFile._hash;
+        sourceFile._deps[id] = bundle._externalID(depFile);
         cb(null);
     }
 

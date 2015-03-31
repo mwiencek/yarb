@@ -21,6 +21,30 @@ test('expose', function (t) {
     });
 });
 
+test('expose with a vinyl object', function (t) {
+    t.plan(1);
+
+    var shim = new File({
+        path: '/fake/path',
+        contents: new Buffer('module.exports = 123;')
+    });
+
+    var b1 = yarb(shim, {basedir: __dirname}).expose(shim, 'shim');
+
+    var b2 = yarb(new File({
+        path: '/another/fake/path',
+        contents: new Buffer("shim = require('shim');")
+    }), {basedir: __dirname}).external(b1);
+
+    b1.bundle(function (err, buf1) {
+        b2.bundle(function (err, buf2) {
+            var context = {};
+            vm.runInNewContext(buf1.toString() + buf2.toString(), context);
+            t.equals(context.shim, 123);
+        });
+    });
+});
+
 test('expose within a single bundle', function (t) {
     t.plan(1);
 
@@ -35,5 +59,33 @@ test('expose within a single bundle', function (t) {
         var context = {};
         vm.runInNewContext(buf.toString(), context);
         t.deepEquals(context, {shim: 'shim'});
+    });
+});
+
+test('expose with a dynamically-required id', function (t) {
+    t.plan(1);
+
+    var shim = new File({
+        path: '/fake/path',
+        contents: new Buffer('module.exports = 123;')
+    });
+
+    var b1 = yarb(shim, {basedir: __dirname}).expose(shim, 'shim');
+
+    var b2 = yarb(new File({
+        path: '/another/fake/path',
+
+        // this can't be statically analyzed, but the .require() and
+        // .external() below should allow it to be found at runtime
+        contents: new Buffer("shim = require('sh' + 'im');")
+
+    }), {basedir: __dirname}).require(shim).external(b1);
+
+    b1.bundle(function (err, buf1) {
+        b2.bundle(function (err, buf2) {
+            var context = {};
+            vm.runInNewContext(buf1.toString() + buf2.toString(), context);
+            t.equals(context.shim, 123);
+        });
     });
 });

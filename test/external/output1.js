@@ -7,13 +7,13 @@ require('shim');
 
 module.exports = 'bundle1';
 
-},{"lib_plugin":"7306050","shim":"02c2834"}],"7306050":[function(require,module,exports){
+},{"lib_plugin":"7306050","shim":"shim"}],"7306050":[function(require,module,exports){
 module.exports = require('lib') + '_plugin';
 
 },{"lib":"d55f59c"}],"d55f59c":[function(require,module,exports){
 module.exports = 'lib';
 
-},{}],"02c2834":[function(require,module,exports){
+},{}],"shim":[function(require,module,exports){
 module.exports = 'shim';
 
 },{}]},{},["a89c396"]);
