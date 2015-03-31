@@ -15,3 +15,16 @@ test('buffer builtin', function (t) {
         t.equals(context.test.toString(), 'a1b2c3');
     });
 });
+
+test('util builtin', function (t) {
+    t.plan(1);
+
+    yarb(new File({
+        path: '/fake/path',
+        contents: new Buffer("A = Array; B = function () {}; require('util').inherits(B, A);")
+    }), {basedir: __dirname}).bundle(function (err, buf) {
+        var context = {};
+        vm.runInNewContext(buf.toString(), context);
+        t.ok(new context.B() instanceof context.A);
+    });
+});

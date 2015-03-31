@@ -19,6 +19,7 @@
     "concat-stream": "^1.4.7",
     "detective": "^4.0.0",
     "events": "^1.0.2",
+    "inherits": "^2.0.1",
     "insert-module-globals": "^6.2.1",
     "object-assign": "^2.0.0",
     "path-browserify": "^0.0.0",
