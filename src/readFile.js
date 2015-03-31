@@ -28,6 +28,9 @@ function readFile(bundle, file, cb) {
 }
 
 var insertGlobalsVars = {
+    Buffer: function () {
+        return "require('_buffer').Buffer";
+    },
     // default insertion reveals full path
     process: function () {
         return "require('_process')";

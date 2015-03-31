@@ -15,6 +15,7 @@ var noError = require('./util/noError');
 // does not handle: most core modules, binary addons, or "browser" field names
 
 var CORE_MODULES = assign(Object.create(null), {
+    _buffer: require.resolve('buffer/'),
     events: require.resolve('events/'),
     fs: require.resolve('./builtin/empty'),
     module: require.resolve('./builtin/empty'),
