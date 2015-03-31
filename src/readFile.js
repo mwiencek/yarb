@@ -18,7 +18,7 @@ function readFile(bundle, file, cb) {
             }
         } else if (!file.stats || file.stats.mtime < stats.mtime) {
             // always assume the contents have changed
-            assign(file, {stats: stats, _deps: {}, _transformed: false});
+            assign(file, {contents: null, stats: stats, _deps: {}, _transformed: false});
             transformContents(bundle, file, cb);
         } else {
             // mtime hasn't changed, return cached buffer
