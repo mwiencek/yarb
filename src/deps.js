@@ -40,7 +40,16 @@ function resolveFileDeps(file, bundle, resolver, cb) {
         function forEachId(id, cb) {
             resolveRequire(id, file, bundle, resolver, cb);
         }
-        sequence(arrayUniq(detective(buf)), forEachId, cb);
+
+        var ids;
+        try {
+            ids = detective(buf);
+        } catch (err) {
+            console.error('failed parsing requires in ' + file.path);
+            throw err;
+        }
+
+        sequence(arrayUniq(ids), forEachId, cb);
     }));
 }
 
