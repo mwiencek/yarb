@@ -79,7 +79,7 @@ Bundle.prototype.expose = function (file, id) {
 };
 
 Bundle.prototype._externalID = function (file) {
-    return getInposed(file, this) || first(this._externals, getInposed.bind(null, file)) || file._hash;
+    return getInposed(file, this) || file._hash;
 };
 
 Bundle.prototype.external = function (bundle) {
@@ -142,7 +142,7 @@ function getVinyls(files, basedir) {
 }
 
 function getInposed(file, bundle) {
-    return bundle._inposed[file.path];
+    return bundle._inposed[file.path] || first(bundle._externals, getInposed.bind(null, file));
 }
 
 module.exports = function (files, options) {

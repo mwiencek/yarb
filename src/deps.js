@@ -60,9 +60,7 @@ function resolveRequire(id, sourceFile, bundle, resolver, cb) {
     }
 
     // check if id is exposed by the current bundle or an external bundle
-    var file = getExposedFile(bundle, id) || first(bundle._externals, function (externalBundle) {
-        return getExposedFile(externalBundle, id);
-    });
+    var file = getExposedFile(bundle, id);
 
     if (file) {
         process.nextTick(function () {
@@ -91,8 +89,14 @@ function resolveRequire(id, sourceFile, bundle, resolver, cb) {
 function getExposedFile(bundle, id) {
     var filename = bundle._exposed[id];
     if (filename) {
-        return bundle._files[filename];
+        var file = bundle._files[filename];
+        if (file) {
+            return file;
+        }
     }
+    return first(bundle._externals, function (externalBundle) {
+        return getExposedFile(externalBundle, id);
+    });
 }
 
 module.exports = resolveBundleDeps;

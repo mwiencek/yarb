@@ -89,3 +89,25 @@ test('expose with a dynamically-required id', function (t) {
         });
     });
 });
+
+test('expose across chained bundles', function (t) {
+    t.plan(1);
+
+    var b1 = yarb([], {basedir: __dirname}).expose('./expose/shim.js', 'shim');
+    var b2 = yarb([], {basedir: __dirname}).external(b1);
+
+    var b3 = yarb(new File({
+        path: '/fake/path',
+        contents: new Buffer("shim = require('shim')")
+    }), {basedir: __dirname}).external(b2);
+
+    b1.bundle(function (err, buf1) {
+        b2.bundle(function (err, buf2) {
+            b3.bundle(function (err, buf3) {
+                var context = {};
+                vm.runInNewContext(buf1.toString() + buf2.toString() + buf3.toString(), context);
+                t.equals(context.shim, 'shim');
+            });
+        });
+    });
+});
