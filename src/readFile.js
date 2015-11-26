@@ -80,6 +80,20 @@ function transformContents(bundle, file, cb) {
     });
 
     contents.pipe(concat({encoding: 'buffer'}, function (buf) {
+        // transform required JSON into valid JS
+        var string = buf.toString();
+        var isJSON = true;
+
+        try {
+            JSON.parse(string);
+        } catch (err) {
+            isJSON = false;
+        }
+
+        if (isJSON) {
+            buf = new Buffer('module.exports = ' + string);
+        }
+
         assign(file, {contents: buf, _transformed: true});
         cb(null, buf);
     }));
