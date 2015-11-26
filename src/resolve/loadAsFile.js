@@ -14,7 +14,9 @@ module.exports = function loadAsFile(x, bundle, cb) {
                 if (file) {
                     cb(null, file);
                 } else {
-                    cb(null, null);
+                    getFile(x + '.json', bundle, noError(cb, function (file) {
+                        cb(null, file || null);
+                    }));
                 }
             }));
         }
