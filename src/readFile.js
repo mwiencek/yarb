@@ -29,7 +29,7 @@ function readFile(bundle, file, cb) {
 
 var insertGlobalsVars = {
     Buffer: function () {
-        return "require('_buffer').Buffer";
+        return "require('buffer').Buffer";
     },
     // default insertion reveals full path
     process: function () {
