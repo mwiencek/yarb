@@ -113,7 +113,7 @@ Bundle.prototype.bundle = function (callback) {
                 id: self._externalID(file),
                 deps: file._deps,
                 sourceFile: file.path,
-                source: file.contents,
+                source: String(file.contents),
                 entry: filename in self._entries,
                 nomap: !self._debug
             });
