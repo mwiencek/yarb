@@ -8,8 +8,6 @@ yarb is much less flexible than browserify, but better at defining dependencies 
 
 While yarb shares API similarities with browserify and is even compatible with browserify transforms, it currently does not handle the full array of core modules (only `events`, `fs`, `module`, `net`, `path`, `stream`, `util`), and lacks most of the settings and behaviors that browserify has.
 
-This project served two purposes for me: (1) fixing a frustration after failing to patch browserify to suit my needs, and (2) learning better how to write node modules. Use browserify unless you know what you’re doing.
-
 ## Notes
 
 Internally, yarb stores files as [vinyl](https://github.com/wearefractal/vinyl) objects, and even accepts these as input wherever a path is accepted. This allows passing in existing buffers/streams by just wrapping them in vinyl objects beforehand.
