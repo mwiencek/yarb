@@ -58,3 +58,16 @@ test('net builtin', function (t) {
         t.equal(context.B, false);
     });
 });
+
+test('url builtin', function (t) {
+    t.plan(1);
+
+    yarb(new File({
+        path: '/fake/path',
+        contents: new Buffer("A = require('url').format({host: 'example.com', protocol: 'https'});")
+    }), {basedir: __dirname}).bundle(function (err, buf) {
+        var context = {};
+        vm.runInNewContext(buf.toString(), context);
+        t.equal(context.A, 'https://example.com');
+    });
+});

@@ -23,7 +23,8 @@ var CORE_MODULES = assign(Object.create(null), {
     net: require.resolve('net-browserify-stub'),
     path: require.resolve('path-browserify'),
     stream: require.resolve('stream-browserify'),
-    util: require.resolve('./builtin/util')
+    url: require.resolve('url/'),
+    util: require.resolve('./builtin/util'),
 });
 
 function Resolver() {
