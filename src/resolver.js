@@ -15,12 +15,13 @@ var noError = require('./util/noError');
 // does not handle: most core modules, binary addons, or "browser" field names
 
 var CORE_MODULES = assign(Object.create(null), {
+    _process: require.resolve('process/browser'),
     buffer: require.resolve('buffer/'),
     events: require.resolve('events/'),
     fs: require.resolve('./builtin/empty'),
     module: require.resolve('./builtin/empty'),
+    net: require.resolve('net-browserify-stub'),
     path: require.resolve('path-browserify'),
-    _process: require.resolve('process/browser'),
     stream: require.resolve('stream-browserify'),
     util: require.resolve('./builtin/util')
 });

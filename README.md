@@ -6,7 +6,7 @@ yarb performs mostly the same task as [browserify](https://github.com/substack/n
 
 yarb is much less flexible than browserify, but better at defining dependencies between bundles. In browserify, sharing files between bundles tends to require a lot of manual `expose` and `external` settings on each file. A yarbundle’s `external` function only accepts other bundles as input, and the bundling process knows exactly which files are common to both.
 
-While yarb shares API similarities with browserify and is even compatible with browserify transforms, it currently does not handle the full array of core modules (only `events`, `fs`, `module`, `path`, `stream`, `util`), and lacks most of the settings and behaviors that browserify has.
+While yarb shares API similarities with browserify and is even compatible with browserify transforms, it currently does not handle the full array of core modules (only `events`, `fs`, `module`, `net`, `path`, `stream`, `util`), and lacks most of the settings and behaviors that browserify has.
 
 This project served two purposes for me: (1) fixing a frustration after failing to patch browserify to suit my needs, and (2) learning better how to write node modules. Use browserify unless you know what you’re doing.
 

@@ -41,3 +41,20 @@ test('util builtin', function (t) {
         t.ok(new context.B() instanceof context.A);
     });
 });
+
+test('net builtin', function (t) {
+    t.plan(2);
+
+    yarb(new File({
+        path: '/fake/path',
+        contents: new Buffer(
+            "A = require('net').isIPv4('127.0.0.1');\n" +
+            "B = require('net').isIPv4('hahahahah');\n"
+        )
+    }), {basedir: __dirname}).bundle(function (err, buf) {
+        var context = {};
+        vm.runInNewContext(buf.toString(), context);
+        t.equal(context.A, true);
+        t.equal(context.B, false);
+    });
+});
